@@ -43,12 +43,35 @@ dotnet run --project src/OrderManager.Api/OrderManager.Api.csproj
 
 The application will be available at `https://localhost:5001`.
 
-## Decomposition Targets
+## Decomposition Status
 
-This monolith is designed to be decomposed into microservices that conform to the
+This monolith is being decomposed into microservices that conform to the
 [platform-engineering-shared-services](https://github.com/Cognition-Partner-Workshops/platform-engineering-shared-services) standard.
 
 See the companion IaC repo: [app_dotnet-angular-monolith-iac](https://github.com/Cognition-Partner-Workshops/app_dotnet-angular-monolith-iac)
+
+### Extracted Domains
+
+| Domain | Microservice Repo | Status |
+|--------|------------------|--------|
+| **Customers** | [app_dotnet-angular-microservices](https://github.com/Cognition-Partner-Workshops/app_dotnet-angular-microservices) | Extracted |
+| **Orders** | — | Still in monolith |
+| **Products** | — | Still in monolith |
+| **Inventory** | — | Still in monolith |
+
+### Customers Domain — Extraction Notes
+
+The Customers domain has been extracted to a dedicated microservice in [app_dotnet-angular-microservices](https://github.com/Cognition-Partner-Workshops/app_dotnet-angular-microservices). The Customer microservice is now the **source of truth** for customer data.
+
+**Why the monolith still contains customer code:**
+
+The customer model, service, controller, and seed data remain in this monolith because the **Orders module** still depends on customer data:
+
+- `OrderService.CreateOrderAsync` reads `_context.Customers.FindAsync(customerId)` to construct the shipping address. This should eventually be replaced with an HTTP call to the Customer microservice API (`GET /api/customers/{id}`) or an event-driven approach.
+- `Customer.Orders` navigation property is used by the Orders module for eager loading.
+- `CustomerService.GetCustomerByIdAsync` does `.Include(c => c.Orders)` for the same reason.
+
+Once the Orders domain is also extracted, the customer code can be fully removed from this monolith.
 
 ## License
 

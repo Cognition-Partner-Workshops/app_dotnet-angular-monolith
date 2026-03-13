@@ -30,6 +30,11 @@ public class OrderService
             .FirstOrDefaultAsync(o => o.Id == id);
     }
 
+    // DECOMPOSITION NOTE: The Customers domain has been extracted to a dedicated microservice.
+    // See: https://github.com/Cognition-Partner-Workshops/app_dotnet-angular-microservices
+    // The _context.Customers.FindAsync() call below should eventually be replaced with an HTTP call
+    // to the Customer microservice API (GET /api/customers/{id}) or an event-driven approach
+    // where this service maintains a local cache of customer shipping addresses.
     public async Task<Order> CreateOrderAsync(int customerId, List<(int ProductId, int Quantity)> items)
     {
         var customer = await _context.Customers.FindAsync(customerId)

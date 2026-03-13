@@ -1,5 +1,9 @@
 namespace OrderManager.Api.Models;
 
+// DECOMPOSITION NOTE: The Customers domain has been extracted to a dedicated microservice.
+// See: https://github.com/Cognition-Partner-Workshops/app_dotnet-angular-microservices
+// The Orders navigation property below is retained because the Orders module still references it.
+// In the extracted microservice, this property has been removed.
 public class Customer
 {
     public int Id { get; set; }
