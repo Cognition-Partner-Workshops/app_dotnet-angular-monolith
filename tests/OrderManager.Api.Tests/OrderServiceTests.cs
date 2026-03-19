@@ -5,8 +5,15 @@ using OrderManager.Api.Services;
 
 namespace OrderManager.Api.Tests;
 
+/// <summary>
+/// Unit tests for <see cref="OrderService"/> using an in-memory database.
+/// </summary>
 public class OrderServiceTests
 {
+    /// <summary>
+    /// Creates a fresh in-memory database context pre-populated with seed data.
+    /// Each test gets an isolated database instance (unique name via GUID).
+    /// </summary>
     private AppDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
@@ -17,6 +24,10 @@ public class OrderServiceTests
         return context;
     }
 
+    /// <summary>
+    /// Verifies that GetAllOrdersAsync returns an empty list when no orders have been placed
+    /// (seed data only creates customers, products, and inventory—not orders).
+    /// </summary>
     [Fact]
     public async Task GetAllOrders_ReturnsEmptyList_WhenNoOrders()
     {
@@ -26,6 +37,9 @@ public class OrderServiceTests
         Assert.Empty(orders);
     }
 
+    /// <summary>
+    /// Verifies that creating an order reduces the on-hand inventory by the ordered quantity.
+    /// </summary>
     [Fact]
     public async Task CreateOrder_DeductsInventory()
     {
@@ -42,6 +56,10 @@ public class OrderServiceTests
         Assert.Equal(qtyBefore - 5, inventoryAfter.QuantityOnHand);
     }
 
+    /// <summary>
+    /// Verifies that ordering more units than available throws an
+    /// <see cref="InvalidOperationException"/> for insufficient stock.
+    /// </summary>
     [Fact]
     public async Task CreateOrder_ThrowsOnInsufficientStock()
     {

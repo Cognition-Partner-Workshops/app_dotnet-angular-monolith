@@ -2,6 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 
+/**
+ * Displays a table of all customers fetched from the `/api/customers` endpoint.
+ * Shows name, email, phone, and city/state.
+ */
 @Component({
   selector: 'app-customer-list',
   standalone: true,
@@ -21,5 +25,7 @@ import { CommonModule } from '@angular/common';
 export class CustomerListComponent implements OnInit {
   customers: any[] = [];
   constructor(private http: HttpClient) {}
+
+  /** Fetches all customers from the backend on component initialization. */
   ngOnInit() { this.http.get<any[]>('/api/customers').subscribe(data => this.customers = data); }
 }

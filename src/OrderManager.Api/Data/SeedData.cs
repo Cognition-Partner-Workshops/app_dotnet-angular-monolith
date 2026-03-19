@@ -2,12 +2,24 @@ using OrderManager.Api.Models;
 
 namespace OrderManager.Api.Data;
 
+/// <summary>
+/// Populates the database with sample data on first run.
+/// </summary>
+/// <remarks>
+/// Seed data is idempotent—if products already exist, the method returns immediately.
+/// This is called at application startup from <c>Program.cs</c>.
+/// </remarks>
 public static class SeedData
 {
+    /// <summary>
+    /// Seeds customers, products, and inventory records into the database if it is empty.
+    /// </summary>
+    /// <param name="context">The database context to seed.</param>
     public static void Initialize(AppDbContext context)
     {
         context.Database.EnsureCreated();
 
+        // Skip seeding if data already exists (idempotent guard)
         if (context.Products.Any()) return;
 
         var customers = new[]
@@ -27,8 +39,10 @@ public static class SeedData
             new Product { Name = "Thingamajig", Description = "Multi-purpose thingamajig", Category = "Misc", Price = 14.99m, Sku = "THG-001" },
         };
         context.Products.AddRange(products);
+        // Save so that product IDs are generated before creating inventory records
         context.SaveChanges();
 
+        // Create one inventory record per product with escalating stock levels
         var inventoryItems = products.Select((p, i) => new InventoryItem
         {
             ProductId = p.Id,

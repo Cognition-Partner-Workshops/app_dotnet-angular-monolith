@@ -1,6 +1,11 @@
 import { Component } from '@angular/core';
 import { RouterOutlet, RouterLink } from '@angular/router';
 
+/**
+ * Root application shell component.
+ * Renders the top navigation bar with links to each domain module
+ * and a `<router-outlet>` for lazy-loaded feature components.
+ */
 @Component({
   selector: 'app-root',
   standalone: true,

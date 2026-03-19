@@ -4,25 +4,48 @@ using OrderManager.Api.Models;
 
 namespace OrderManager.Api.Services;
 
+/// <summary>
+/// Provides business logic for managing <see cref="InventoryItem"/> stock levels.
+/// </summary>
 public class InventoryService
 {
     private readonly AppDbContext _context;
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="InventoryService"/>.
+    /// </summary>
+    /// <param name="context">The database context for data access.</param>
     public InventoryService(AppDbContext context)
     {
         _context = context;
     }
 
+    /// <summary>
+    /// Retrieves all inventory records with their associated product data.
+    /// </summary>
+    /// <returns>A list of all <see cref="InventoryItem"/> records with products included.</returns>
     public async Task<List<InventoryItem>> GetAllInventoryAsync()
     {
         return await _context.InventoryItems.Include(i => i.Product).ToListAsync();
     }
 
+    /// <summary>
+    /// Retrieves the inventory record for a specific product.
+    /// </summary>
+    /// <param name="productId">The product's unique identifier.</param>
+    /// <returns>The matching <see cref="InventoryItem"/> with product included, or <c>null</c> if not found.</returns>
     public async Task<InventoryItem?> GetInventoryByProductIdAsync(int productId)
     {
         return await _context.InventoryItems.Include(i => i.Product).FirstOrDefaultAsync(i => i.ProductId == productId);
     }
 
+    /// <summary>
+    /// Adds the specified quantity to a product's on-hand stock and updates the restock timestamp.
+    /// </summary>
+    /// <param name="productId">The product whose inventory should be restocked.</param>
+    /// <param name="quantity">The number of units to add to the current stock.</param>
+    /// <returns>The updated <see cref="InventoryItem"/>.</returns>
+    /// <exception cref="ArgumentException">Thrown when no inventory record exists for the given product.</exception>
     public async Task<InventoryItem> RestockAsync(int productId, int quantity)
     {
         var item = await _context.InventoryItems.FirstOrDefaultAsync(i => i.ProductId == productId)
@@ -33,6 +56,10 @@ public class InventoryService
         return item;
     }
 
+    /// <summary>
+    /// Retrieves inventory items where the on-hand quantity is at or below the reorder level.
+    /// </summary>
+    /// <returns>A list of low-stock <see cref="InventoryItem"/> records with products included.</returns>
     public async Task<List<InventoryItem>> GetLowStockItemsAsync()
     {
         return await _context.InventoryItems
