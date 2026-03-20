@@ -1,5 +1,10 @@
 import { Routes } from '@angular/router';
 
+/**
+ * Application route definitions.
+ * Each feature module is lazy-loaded via dynamic `import()` for code splitting.
+ * The default route redirects to the orders view.
+ */
 export const routes: Routes = [
   { path: '', redirectTo: '/orders', pathMatch: 'full' },
   { path: 'orders', loadComponent: () => import('./modules/orders/order-list.component').then(m => m.OrderListComponent) },

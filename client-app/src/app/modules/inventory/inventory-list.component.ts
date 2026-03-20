@@ -2,6 +2,12 @@ import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 
+/**
+ * Displays a table of all inventory items fetched from the `/api/inventory` endpoint.
+ * Shows product name, quantity on hand, reorder level, warehouse location, and last restock date.
+ * Rows where `quantityOnHand <= reorderLevel` are highlighted with the `low-stock` CSS class.
+ * Lazy-loaded when the user navigates to the `/inventory` route.
+ */
 @Component({
   selector: 'app-inventory-list',
   standalone: true,
@@ -19,7 +25,11 @@ import { CommonModule } from '@angular/common';
   `
 })
 export class InventoryListComponent implements OnInit {
+  /** The list of inventory items retrieved from the backend API. */
   items: any[] = [];
+
   constructor(private http: HttpClient) {}
+
+  /** Fetches all inventory items from the API on component initialization. */
   ngOnInit() { this.http.get<any[]>('/api/inventory').subscribe(data => this.items = data); }
 }
