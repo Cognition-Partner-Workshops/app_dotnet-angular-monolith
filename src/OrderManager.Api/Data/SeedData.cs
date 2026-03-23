@@ -2,14 +2,28 @@ using OrderManager.Api.Models;
 
 namespace OrderManager.Api.Data;
 
+/// <summary>
+/// Provides seed data initialization for the OrderManager database.
+/// Populates the database with sample customers, products, and inventory items
+/// for local development and demonstration purposes.
+/// </summary>
 public static class SeedData
 {
+    /// <summary>
+    /// Seeds the database with initial sample data if it has not already been populated.
+    /// Creates the database schema if it does not exist, then inserts sample customers,
+    /// products, and inventory items. This method is idempotent — it skips seeding if
+    /// products already exist in the database.
+    /// </summary>
+    /// <param name="context">The application database context used to insert seed data.</param>
     public static void Initialize(AppDbContext context)
     {
         context.Database.EnsureCreated();
 
+        // Skip seeding if data already exists to ensure idempotency
         if (context.Products.Any()) return;
 
+        // Seed sample customer records
         var customers = new[]
         {
             new Customer { Name = "Acme Corp", Email = "orders@acme.com", Phone = "555-0100", Address = "123 Main St", City = "Springfield", State = "IL", ZipCode = "62701" },
@@ -18,6 +32,7 @@ public static class SeedData
         };
         context.Customers.AddRange(customers);
 
+        // Seed sample product catalog
         var products = new[]
         {
             new Product { Name = "Widget A", Description = "Standard widget", Category = "Widgets", Price = 9.99m, Sku = "WGT-001" },
@@ -29,6 +44,7 @@ public static class SeedData
         context.Products.AddRange(products);
         context.SaveChanges();
 
+        // Seed inventory items with incrementing stock quantities and sequential warehouse locations
         var inventoryItems = products.Select((p, i) => new InventoryItem
         {
             ProductId = p.Id,

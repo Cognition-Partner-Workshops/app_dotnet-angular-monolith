@@ -1,6 +1,14 @@
 import { Component } from '@angular/core';
 import { RouterOutlet, RouterLink } from '@angular/router';
 
+/**
+ * Root component of the OrderManager Angular application.
+ * Renders the global navigation bar with links to the four main feature modules
+ * (Orders, Products, Customers, Inventory) and a `<router-outlet>` where
+ * lazy-loaded feature components are displayed.
+ *
+ * This is a standalone component that directly imports Angular Router directives.
+ */
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -17,5 +25,6 @@ import { RouterOutlet, RouterLink } from '@angular/router';
   `
 })
 export class AppComponent {
+  /** The application title displayed in the browser tab and navigation header. */
   title = 'OrderManager';
 }
