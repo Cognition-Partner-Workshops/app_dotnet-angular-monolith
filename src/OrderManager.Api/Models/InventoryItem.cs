@@ -1,5 +1,9 @@
 namespace OrderManager.Api.Models;
 
+/// <summary>
+/// Retained for EF Core migration compatibility. Inventory is now managed by the inventory-service microservice.
+/// New inventory operations should use InventoryHttpClient instead of direct database access.
+/// </summary>
 public class InventoryItem
 {
     public int Id { get; set; }
