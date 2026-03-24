@@ -44,8 +44,19 @@ public class InventoryServiceClient
 
         if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
         {
-            var error = await response.Content.ReadFromJsonAsync<ErrorResponse>();
-            throw new InvalidOperationException(error?.Error ?? "Insufficient stock");
+            var body = await response.Content.ReadAsStringAsync();
+            var message = "Insufficient stock";
+            if (!string.IsNullOrWhiteSpace(body))
+            {
+                try
+                {
+                    var error = System.Text.Json.JsonSerializer.Deserialize<ErrorResponse>(body);
+                    if (!string.IsNullOrEmpty(error?.Error))
+                        message = error.Error;
+                }
+                catch (System.Text.Json.JsonException) { }
+            }
+            throw new InvalidOperationException(message);
         }
 
         response.EnsureSuccessStatusCode();
