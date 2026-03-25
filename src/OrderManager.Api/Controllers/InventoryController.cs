@@ -43,10 +43,6 @@ public class InventoryController : ControllerBase
         {
             return Conflict(new { error = ex.Message });
         }
-        catch (ArgumentException ex)
-        {
-            return NotFound(new { error = ex.Message });
-        }
     }
 
     [HttpGet("low-stock")]
