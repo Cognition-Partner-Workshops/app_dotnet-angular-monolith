@@ -54,4 +54,3 @@ public class InventoryController : ControllerBase
 }
 
 public record RestockRequest(int Quantity);
-public record DeductRequest(int Quantity);
