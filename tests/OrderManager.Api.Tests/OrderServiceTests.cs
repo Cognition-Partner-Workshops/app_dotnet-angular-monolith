@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Moq;
 using OrderManager.Api.Data;
 using OrderManager.Api.Models;
 using OrderManager.Api.Services;
@@ -88,7 +87,7 @@ public class OrderServiceTests
     }
 
     [Fact]
-    public async Task CreateOrder_DeductsStockViaMicroservice()
+    public async Task CreateOrder_SucceedsWhenStockAvailable()
     {
         using var context = CreateContext();
         var product = await context.Products.FirstAsync();
