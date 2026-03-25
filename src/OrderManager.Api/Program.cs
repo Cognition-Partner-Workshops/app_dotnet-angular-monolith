@@ -14,6 +14,7 @@ builder.Services.AddHttpClient<InventoryHttpClient>(client =>
     client.BaseAddress = new Uri(inventoryServiceUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
 });
+builder.Services.AddScoped<IInventoryClient>(sp => sp.GetRequiredService<InventoryHttpClient>());
 
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<ProductService>();
@@ -26,6 +27,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
+
+builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
@@ -40,5 +43,6 @@ app.UseSwaggerUI();
 app.UseCors();
 app.UseStaticFiles();
 app.MapControllers();
+app.MapHealthChecks("/health");
 app.MapFallbackToFile("index.html");
 app.Run();

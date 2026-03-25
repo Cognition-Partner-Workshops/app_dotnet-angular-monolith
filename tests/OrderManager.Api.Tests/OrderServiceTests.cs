@@ -1,5 +1,3 @@
-using System.Net;
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using OrderManager.Api.Clients;
 using OrderManager.Api.Data;
@@ -41,6 +39,8 @@ public class OrderServiceTests
     public async Task CreateOrder_CallsInventoryServiceToDeductStock()
     {
         using var context = CreateContext();
+        var mockClient = CreateMockInventoryClient(deductSuccess: true);
+        var service = new OrderService(context, mockClient.Object);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
@@ -57,7 +57,6 @@ public class OrderServiceTests
         var service = new OrderService(context, inventoryClient);
 
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
-
         Assert.NotNull(order);
         Assert.Single(order.Items);
         Assert.Equal(product.Id, order.Items.First().ProductId);
@@ -67,6 +66,8 @@ public class OrderServiceTests
     public async Task CreateOrder_ThrowsWhenInventoryServiceReturnsConflict()
     {
         using var context = CreateContext();
+        var mockClient = CreateMockInventoryClient(deductSuccess: false);
+        var service = new OrderService(context, mockClient.Object);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
