@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 using Xunit;
+using Microsoft.EntityFrameworkCore;
 using OrderManager.Api.Data;
 using OrderManager.Api.Models;
 using OrderManager.Api.Services;
@@ -20,25 +22,18 @@ public class OrderServiceTests
         return context;
     }
 
-    private static InventoryApiClient CreateInventoryClient(bool deductSucceeds = true)
-    {
-        var handler = new FakeInventoryHandler(deductSucceeds);
-        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://fake-inventory") };
-        return new InventoryApiClient(httpClient);
-    }
-
     [Fact]
     public async Task GetAllOrders_ReturnsEmptyList_WhenNoOrders()
     {
         using var context = CreateContext();
-        var inventoryClient = CreateInventoryClient();
-        var service = new OrderService(context, inventoryClient);
+        var mockClient = new Mock<IInventoryServiceClient>();
+        var service = new OrderService(context, mockClient.Object);
         var orders = await service.GetAllOrdersAsync();
         Assert.Empty(orders);
     }
 
     [Fact]
-    public async Task CreateOrder_DeductsStockViaMicroservice()
+    public async Task CreateOrder_DeductsStockViaInventoryService()
     {
         using var context = CreateContext();
         var inventoryClient = CreateInventoryClient(deductSucceeds: true);
@@ -46,6 +41,15 @@ public class OrderServiceTests
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
+        var mockClient = new Mock<IInventoryServiceClient>();
+        mockClient.Setup(c => c.DeductStockAsync(product.Id, 5))
+            .ReturnsAsync(new InventoryItem
+            {
+                Id = 1, ProductId = product.Id, ProductName = product.Name,
+                QuantityOnHand = 45, ReorderLevel = 10, WarehouseLocation = "A-01"
+            });
+
+        var service = new OrderService(context, mockClient.Object);
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
         Assert.NotNull(order);
@@ -63,8 +67,27 @@ public class OrderServiceTests
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
+        var mockClient = new Mock<IInventoryServiceClient>();
+        mockClient.Setup(c => c.DeductStockAsync(product.Id, 99999))
+            .ThrowsAsync(new InvalidOperationException("Insufficient stock"));
+
+        var service = new OrderService(context, mockClient.Object);
+
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 99999) }));
+    }
+
+    [Fact]
+    public async Task CreateOrder_ThrowsWhenProductNotInInventory()
+    {
+        using var context = CreateContext();
+        var inventoryClient = new FakeInventoryServiceClient(new Dictionary<int, int>());
+        var service = new OrderService(context, inventoryClient);
+        var product = await context.Products.FirstAsync();
+        var customer = await context.Customers.FirstAsync();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 1) }));
     }
 }
 

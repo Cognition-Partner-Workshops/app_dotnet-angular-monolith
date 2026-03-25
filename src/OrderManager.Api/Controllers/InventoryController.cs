@@ -3,16 +3,13 @@ using OrderManager.Api.Services;
 
 namespace OrderManager.Api.Controllers;
 
-/// <summary>
-/// Proxies inventory requests to the inventory-service microservice.
-/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class InventoryController : ControllerBase
 {
-    private readonly InventoryApiClient _inventoryClient;
+    private readonly IInventoryServiceClient _inventoryClient;
 
-    public InventoryController(InventoryApiClient inventoryClient)
+    public InventoryController(IInventoryServiceClient inventoryClient)
     {
         _inventoryClient = inventoryClient;
     }
@@ -40,10 +37,19 @@ public class InventoryController : ControllerBase
     [HttpPost("product/{productId}/deduct")]
     public async Task<IActionResult> Deduct(int productId, [FromBody] DeductRequest request)
     {
-        var success = await _inventoryClient.CheckAndDeductStockAsync(productId, request.Quantity);
-        if (!success)
-            return Conflict(new { error = $"Insufficient stock for product {productId}" });
-        return Ok(new { message = "Stock deducted successfully" });
+        try
+        {
+            var item = await _inventoryClient.DeductStockAsync(productId, request.Quantity);
+            return Ok(item);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { error = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
     }
 }
 
