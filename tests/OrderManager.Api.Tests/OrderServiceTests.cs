@@ -50,6 +50,18 @@ public class OrderServiceTests
                 LastRestocked = DateTime.UtcNow
             }));
 
+        mockHttp.When(HttpMethod.Post, "*/api/inventory/product/*/deduct")
+            .Respond("application/json", JsonSerializer.Serialize(new InventoryItemDto
+            {
+                Id = 1,
+                ProductId = 1,
+                ProductName = "Widget A",
+                QuantityOnHand = stockQuantity - 5,
+                ReorderLevel = 10,
+                WarehouseLocation = "A-01",
+                LastRestocked = DateTime.UtcNow
+            }));
+
         var httpClient = mockHttp.ToHttpClient();
         httpClient.BaseAddress = new Uri("http://localhost:5002");
         return new InventoryHttpClient(httpClient);

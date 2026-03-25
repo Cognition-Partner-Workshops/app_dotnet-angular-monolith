@@ -52,12 +52,8 @@ public class InventoryHttpClient
 
     public async Task DeductStockAsync(int productId, int quantity)
     {
-        var item = await GetInventoryByProductIdAsync(productId)
-            ?? throw new InvalidOperationException($"No inventory record for product {productId}");
-        // Restock with negative quantity to deduct (restock endpoint adds to quantity)
-        // Instead, we call a dedicated endpoint or handle differently
-        // For now, we use a negative restock as a simple deduction mechanism
-        await RestockAsync(productId, -quantity);
+        var response = await _httpClient.PostAsJsonAsync($"api/inventory/product/{productId}/deduct", new { quantity });
+        response.EnsureSuccessStatusCode();
     }
 }
 
