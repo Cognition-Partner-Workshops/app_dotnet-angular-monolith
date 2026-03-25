@@ -18,14 +18,6 @@ builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<CustomerService>();
 
-// Inventory calls are now proxied to the inventory microservice
-builder.Services.AddHttpClient<InventoryHttpClient>(client =>
-{
-    var baseUrl = builder.Configuration["InventoryService:BaseUrl"] ?? "http://localhost:5002";
-    client.BaseAddress = new Uri(baseUrl);
-    client.Timeout = TimeSpan.FromSeconds(30);
-});
-
 builder.Services.AddControllers().AddJsonOptions(options =>
     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
 

@@ -1,8 +1,11 @@
 using System.Net.Http.Json;
-using OrderManager.Api.Models;
 
 namespace OrderManager.Api.Services;
 
+/// <summary>
+/// HTTP client that proxies inventory operations to the standalone inventory-service microservice.
+/// Replaces the former in-process InventoryService that accessed the shared database directly.
+/// </summary>
 public class InventoryHttpClient
 {
     private readonly HttpClient _httpClient;
@@ -41,7 +44,7 @@ public class InventoryHttpClient
         return items?.Select(MapToInventoryItem).ToList() ?? new List<InventoryItem>();
     }
 
-    public async Task<bool> CheckStockAsync(int productId, int quantity)
+    public async Task<bool> DeductStockAsync(int productId, int quantity)
     {
         var result = await _httpClient.GetFromJsonAsync<StockCheckResult>($"api/inventory/product/{productId}/check?quantity={quantity}");
         return result?.Available ?? false;
@@ -86,9 +89,8 @@ public class InventoryItemDto
     public DateTime LastRestocked { get; set; }
 }
 
-public class StockCheckResult
+public class StockLevelDto
 {
     public int ProductId { get; set; }
-    public int Quantity { get; set; }
-    public bool Available { get; set; }
+    public int QuantityOnHand { get; set; }
 }
