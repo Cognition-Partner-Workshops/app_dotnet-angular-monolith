@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using OrderManager.Api.Clients;
 using OrderManager.Api.Data;
 using OrderManager.Api.Models;
 using OrderManager.Api.Services;
@@ -9,51 +10,63 @@ using Xunit;
 namespace OrderManager.Api.Tests;
 
 /// <summary>
-/// In-memory mock of IInventoryServiceClient for testing OrderService
+/// In-memory mock of IInventoryClient for testing OrderService
 /// without requiring the inventory microservice to be running.
 /// </summary>
-public class MockInventoryServiceClient : IInventoryServiceClient
+public class MockInventoryClient : IInventoryClient
 {
     private readonly Dictionary<int, InventoryItem> _inventory = new();
 
-    public MockInventoryServiceClient(IEnumerable<InventoryItem> seedItems)
+    public MockInventoryClient(IEnumerable<InventoryItem> seedItems)
     {
         foreach (var item in seedItems)
             _inventory[item.ProductId] = item;
     }
 
-    public Task<List<InventoryItem>> GetAllInventoryAsync()
-        => Task.FromResult(_inventory.Values.ToList());
+    public Task<List<InventoryItemDto>> GetAllInventoryAsync()
+        => Task.FromResult(_inventory.Values.Select(ToDto).ToList());
 
-    public Task<InventoryItem?> GetInventoryByProductIdAsync(int productId)
-        => Task.FromResult(_inventory.GetValueOrDefault(productId));
+    public Task<InventoryItemDto?> GetInventoryByProductIdAsync(int productId)
+        => Task.FromResult(_inventory.TryGetValue(productId, out var item) ? ToDto(item) : null);
 
-    public Task<InventoryItem> RestockAsync(int productId, int quantity)
+    public Task<InventoryItemDto> RestockAsync(int productId, int quantity)
     {
         if (!_inventory.TryGetValue(productId, out var item))
             throw new InvalidOperationException($"Inventory not found for product {productId}");
         item.QuantityOnHand += quantity;
-        return Task.FromResult(item);
+        return Task.FromResult(ToDto(item));
     }
 
-    public Task<List<InventoryItem>> GetLowStockItemsAsync()
-        => Task.FromResult(_inventory.Values.Where(i => i.QuantityOnHand <= i.ReorderLevel).ToList());
+    public Task<List<InventoryItemDto>> GetLowStockItemsAsync()
+        => Task.FromResult(_inventory.Values.Where(i => i.QuantityOnHand <= i.ReorderLevel).Select(ToDto).ToList());
 
-    public Task<InventoryItem?> DeductStockAsync(int productId, int quantity)
+    public Task<bool> CheckStockAsync(int productId, int quantity)
     {
         if (!_inventory.TryGetValue(productId, out var item))
-            return Task.FromResult<InventoryItem?>(null);
+            return Task.FromResult(false);
+        return Task.FromResult(item.QuantityOnHand >= quantity);
+    }
+
+    public Task<InventoryItemDto> DeductStockAsync(int productId, int quantity)
+    {
+        if (!_inventory.TryGetValue(productId, out var item))
+            throw new ArgumentException($"No inventory record for product {productId}");
         if (item.QuantityOnHand < quantity)
             throw new InvalidOperationException($"Insufficient stock for product {productId}");
         item.QuantityOnHand -= quantity;
-        return Task.FromResult<InventoryItem?>(item);
+        return Task.FromResult(ToDto(item));
     }
 
-    public Task<int> GetStockLevelAsync(int productId)
+    private static InventoryItemDto ToDto(InventoryItem item) => new()
     {
-        var qty = _inventory.TryGetValue(productId, out var item) ? item.QuantityOnHand : 0;
-        return Task.FromResult(qty);
-    }
+        Id = item.Id,
+        ProductId = item.ProductId,
+        ProductName = item.ProductName,
+        QuantityOnHand = item.QuantityOnHand,
+        ReorderLevel = item.ReorderLevel,
+        WarehouseLocation = item.WarehouseLocation,
+        LastRestocked = item.LastRestocked
+    };
 }
 
 public class OrderServiceTests
@@ -68,9 +81,9 @@ public class OrderServiceTests
         return context;
     }
 
-    private static MockInventoryServiceClient CreateMockInventoryClient()
+    private static MockInventoryClient CreateMockInventoryClient()
     {
-        return new MockInventoryServiceClient(new[]
+        return new MockInventoryClient(new[]
         {
             new InventoryItem { Id = 1, ProductId = 1, ProductName = "Widget A", QuantityOnHand = 50, ReorderLevel = 10, WarehouseLocation = "A-01" },
             new InventoryItem { Id = 2, ProductId = 2, ProductName = "Widget B", QuantityOnHand = 100, ReorderLevel = 10, WarehouseLocation = "A-02" },
@@ -86,12 +99,14 @@ public class OrderServiceTests
         using var context = CreateContext();
         var inventoryClient = CreateMockInventoryClient();
         var service = new OrderService(context, inventoryClient);
+
         var orders = await service.GetAllOrdersAsync();
+
         Assert.Empty(orders);
     }
 
     [Fact]
-    public async Task CreateOrder_CallsInventoryService()
+    public async Task CreateOrder_DeductsInventoryViaHttpClient()
     {
         using var context = CreateContext();
         var inventoryClient = CreateMockInventoryClient();
