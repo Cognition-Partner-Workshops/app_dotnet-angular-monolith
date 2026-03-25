@@ -1,9 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Moq;
+using Moq.Protected;
 using Xunit;
 using OrderManager.Api.Data;
-using OrderManager.Api.Models;
 using OrderManager.Api.Services;
 
 namespace OrderManager.Api.Tests;
@@ -20,49 +22,53 @@ public class OrderServiceTests
         return context;
     }
 
-    private static InventoryService CreateInventoryService(Dictionary<string, HttpResponseMessage> responses)
+    private static InventoryServiceClient CreateInventoryServiceClient(
+        HttpStatusCode statusCode = HttpStatusCode.OK,
+        string? jsonContent = null)
     {
-        var handler = new FakeHttpMessageHandler(responses);
-        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost:5100") };
-        return new InventoryService(httpClient);
+        var mockHandler = new Mock<HttpMessageHandler>(MockBehavior.Loose);
+        mockHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(() =>
+            {
+                var response = new HttpResponseMessage(statusCode);
+                if (jsonContent != null)
+                    response.Content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
+                else if (statusCode == HttpStatusCode.OK)
+                    response.Content = new StringContent(
+                        "{\"success\":true,\"message\":\"Stock reserved\",\"details\":[]}",
+                        System.Text.Encoding.UTF8,
+                        "application/json");
+                return response;
+            });
+
+        var httpClient = new HttpClient(mockHandler.Object) { BaseAddress = new Uri("http://localhost:5100") };
+        var logger = new Mock<ILogger<InventoryServiceClient>>();
+        return new InventoryServiceClient(httpClient, logger.Object);
     }
 
     [Fact]
     public async Task GetAllOrders_ReturnsEmptyList_WhenNoOrders()
     {
         using var context = CreateContext();
-        var responses = new Dictionary<string, HttpResponseMessage>(); 
-        var inventoryService = CreateInventoryService(responses);
-        var service = new OrderService(context, inventoryService);
+        var inventoryClient = CreateInventoryServiceClient();
+        var service = new OrderService(context, inventoryClient);
         var orders = await service.GetAllOrdersAsync();
         Assert.Empty(orders);
     }
 
     [Fact]
-    public async Task CreateOrder_SucceedsWhenStockAvailable()
+    public async Task CreateOrder_DeductsStockViaMicroservice()
     {
         using var context = CreateContext();
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
-        var responses = new Dictionary<string, HttpResponseMessage>
-        {
-            [$"api/inventory/product/{product.Id}/check?quantity=5"] = new(HttpStatusCode.OK)
-            {
-                Content = JsonContent.Create(new { productId = product.Id, quantity = 5, available = true })
-            },
-            [$"api/inventory/product/{product.Id}/deduct"] = new(HttpStatusCode.OK)
-            {
-                Content = JsonContent.Create(new InventoryItemDto
-                {
-                    Id = 1, ProductId = product.Id, ProductName = product.Name,
-                    QuantityOnHand = 45, ReorderLevel = 10, WarehouseLocation = "A-01"
-                })
-            }
-        };
-
-        var inventoryService = CreateInventoryService(responses);
-        var service = new OrderService(context, inventoryService);
+        var inventoryClient = CreateInventoryServiceClient(HttpStatusCode.OK);
+        var service = new OrderService(context, inventoryClient);
 
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
@@ -78,36 +84,11 @@ public class OrderServiceTests
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
-        var responses = new Dictionary<string, HttpResponseMessage>
-        {
-            [$"api/inventory/product/{product.Id}/check?quantity=99999"] = new(HttpStatusCode.OK)
-            {
-                Content = JsonContent.Create(new { productId = product.Id, quantity = 99999, available = false })
-            }
-        };
-
-        var inventoryService = CreateInventoryService(responses);
-        var service = new OrderService(context, inventoryService);
+        var failJson = "{\"success\":false,\"message\":\"Insufficient stock\",\"details\":[]}";
+        var inventoryClient = CreateInventoryServiceClient(HttpStatusCode.OK, failJson);
+        var service = new OrderService(context, inventoryClient);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 99999) }));
-    }
-}
-
-public class FakeHttpMessageHandler : HttpMessageHandler
-{
-    private readonly Dictionary<string, HttpResponseMessage> _responses;
-
-    public FakeHttpMessageHandler(Dictionary<string, HttpResponseMessage> responses)
-    {
-        _responses = responses;
-    }
-
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-    {
-        var path = request.RequestUri?.PathAndQuery.TrimStart('/') ?? string.Empty;
-        if (_responses.TryGetValue(path, out var response))
-            return Task.FromResult(response);
-        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
     }
 }
