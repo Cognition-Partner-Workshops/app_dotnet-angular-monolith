@@ -2,9 +2,11 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using OrderManager.Api.Clients;
 using OrderManager.Api.Data;
 using OrderManager.Api.Models;
 using OrderManager.Api.Services;
+using Xunit;
 
 namespace OrderManager.Api.Tests;
 
@@ -44,12 +46,11 @@ public class OrderServiceTests
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
-        var deductResponse = new InventoryItem
+        var deductResponse = new InventoryItemDto
         {
             Id = 1,
             ProductId = product.Id,
             ProductName = product.Name,
-            Sku = product.Sku,
             QuantityOnHand = 45,
             ReorderLevel = 10,
             WarehouseLocation = "A-01"
