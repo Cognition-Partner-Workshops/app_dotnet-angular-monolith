@@ -43,6 +43,7 @@ public class OrderService
             ShippingAddress = $"{customer.Address}, {customer.City}, {customer.State} {customer.ZipCode}"
         };
 
+        // Check stock availability via inventory-service before creating order
         foreach (var (productId, quantity) in items)
         {
             var product = await _context.Products.FindAsync(productId)
