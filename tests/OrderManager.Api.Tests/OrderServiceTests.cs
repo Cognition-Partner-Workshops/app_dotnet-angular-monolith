@@ -75,9 +75,6 @@ public class OrderServiceTests
         var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
-        var stockLevels = new Dictionary<int, int> { { product.Id, 100 } };
-        var inventoryClient = CreateInventoryClient(stockLevels);
-        var service = new OrderService(context, inventoryClient);
 
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
@@ -94,9 +91,6 @@ public class OrderServiceTests
         var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
-        var stockLevels = new Dictionary<int, int> { { product.Id, 2 } };
-        var inventoryClient = CreateInventoryClient(stockLevels);
-        var service = new OrderService(context, inventoryClient);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 99999) }));
@@ -133,7 +127,7 @@ public class FakeInventoryHandler : HttpMessageHandler
             {
                 var response = new HttpResponseMessage(HttpStatusCode.OK)
                 {
-                    Content = JsonContent.Create(new InventoryItemDto
+                    Content = JsonContent.Create(new InventoryCheckResult
                     {
                         Id = 1, ProductId = 1, ProductName = "Widget A",
                         QuantityOnHand = 45, ReorderLevel = 10,
