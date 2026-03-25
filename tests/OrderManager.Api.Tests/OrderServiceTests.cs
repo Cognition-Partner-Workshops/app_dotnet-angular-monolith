@@ -32,7 +32,7 @@ public class FakeInventoryClient : IInventoryServiceClient
     public Task<InventoryItem?> GetInventoryByProductIdAsync(int productId) =>
         Task.FromResult(_stock.ContainsKey(productId)
             ? new InventoryItem { ProductId = productId, QuantityOnHand = _stock[productId] }
-            : null);
+            : (InventoryItem?)null);
 
     public Task<InventoryItem> RestockAsync(int productId, int quantity)
     {
@@ -46,9 +46,19 @@ public class FakeInventoryClient : IInventoryServiceClient
 
     public Task<InventoryItem> DeductStockAsync(int productId, int quantity)
     {
-        if (_shouldFail)
-            throw new InvalidOperationException("Insufficient stock");
-        return Task.FromResult(new InventoryItem { ProductId = productId, QuantityOnHand = 100 - quantity });
+        if (_shouldThrowOnDeduct)
+            throw new InvalidOperationException($"Insufficient stock for product {productId}");
+
+        if (!_stock.ContainsKey(productId))
+            throw new ArgumentException($"No inventory record for product {productId}");
+        if (_stock[productId] < quantity)
+            throw new InvalidOperationException($"Insufficient stock for product {productId}");
+        _stock[productId] -= quantity;
+        return Task.FromResult(new InventoryItem
+        {
+            ProductId = productId,
+            QuantityOnHand = _stock[productId]
+        });
     }
 
     public Task<List<InventoryItem>> GetLowStockItemsAsync() =>
@@ -80,7 +90,7 @@ public class OrderServiceTests
     }
 
     [Fact]
-    public async Task CreateOrder_DeductsStockViaMicroservice()
+    public async Task CreateOrder_SucceedsWhenStockAvailable()
     {
         using var context = CreateContext();
         var product = await context.Products.FirstAsync();
@@ -93,7 +103,7 @@ public class OrderServiceTests
 
         Assert.NotNull(order);
         Assert.Single(order.Items);
-        Assert.Equal(5, order.Items.First().Quantity);
+        Assert.Equal(product.Price * 5, order.TotalAmount);
     }
 
     [Fact]
