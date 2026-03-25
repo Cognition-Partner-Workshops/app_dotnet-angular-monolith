@@ -35,12 +35,12 @@ public class InventoryController : ControllerBase
     }
 
     [HttpGet("low-stock")]
-    public async Task<IActionResult> GetLowStock() => Ok(await _inventoryClient.GetLowStockItemsAsync());
+    public async Task<IActionResult> GetLowStock() => Ok(await _inventoryService.GetLowStockItemsAsync());
 
     [HttpGet("product/{productId}/check")]
     public async Task<IActionResult> CheckStock(int productId, [FromQuery] int quantity = 1)
     {
-        var available = await _inventoryClient.CheckStockAsync(productId, quantity);
+        var available = await _inventoryService.CheckStockAsync(productId, quantity);
         return Ok(new { productId, quantity, available });
     }
 
@@ -49,7 +49,7 @@ public class InventoryController : ControllerBase
     {
         try
         {
-            var item = await _inventoryClient.DeductStockAsync(productId, request.Quantity);
+            var item = await _inventoryService.DeductStockAsync(productId, request.Quantity);
             return Ok(item);
         }
         catch (HttpRequestException)
@@ -60,3 +60,4 @@ public class InventoryController : ControllerBase
 }
 
 public record RestockRequest(int Quantity);
+public record DeductRequest(int Quantity);
