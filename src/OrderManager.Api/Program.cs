@@ -7,8 +7,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=ordermanager.db"));
 
+// Register HTTP client for the inventory microservice
 var inventoryServiceUrl = builder.Configuration["InventoryService:BaseUrl"] ?? "http://localhost:5002";
-builder.Services.AddHttpClient<InventoryServiceClient>(client =>
+builder.Services.AddHttpClient<IInventoryServiceClient, InventoryHttpClient>(client =>
 {
     client.BaseAddress = new Uri(inventoryServiceUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
@@ -26,6 +27,8 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
+builder.Services.AddHealthChecks();
+
 var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
@@ -39,5 +42,6 @@ app.UseSwaggerUI();
 app.UseCors();
 app.UseStaticFiles();
 app.MapControllers();
+app.MapHealthChecks("/health");
 app.MapFallbackToFile("index.html");
 app.Run();

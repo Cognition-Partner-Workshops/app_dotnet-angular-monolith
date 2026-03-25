@@ -3,16 +3,13 @@ using OrderManager.Api.Services;
 
 namespace OrderManager.Api.Controllers;
 
-/// <summary>
-/// Proxies inventory requests to the inventory-service microservice.
-/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class InventoryController : ControllerBase
 {
-    private readonly InventoryServiceClient _inventoryClient;
+    private readonly IInventoryServiceClient _inventoryClient;
 
-    public InventoryController(InventoryServiceClient inventoryClient)
+    public InventoryController(IInventoryServiceClient inventoryClient)
     {
         _inventoryClient = inventoryClient;
     }
@@ -34,9 +31,6 @@ public class InventoryController : ControllerBase
         return Ok(item);
     }
 
-    [HttpGet("low-stock")]
-    public async Task<IActionResult> GetLowStock() => Ok(await _inventoryClient.GetLowStockItemsAsync());
-
     [HttpPost("product/{productId}/deduct")]
     public async Task<IActionResult> Deduct(int productId, [FromBody] DeductRequest request)
     {
@@ -49,14 +43,14 @@ public class InventoryController : ControllerBase
         {
             return Conflict(new { error = ex.Message });
         }
+        catch (ArgumentException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
     }
 
-    [HttpGet("product/{productId}/check")]
-    public async Task<IActionResult> CheckStock(int productId, [FromQuery] int quantity = 1)
-    {
-        var available = await _inventoryClient.CheckStockAsync(productId, quantity);
-        return Ok(new { productId, quantity, available });
-    }
+    [HttpGet("low-stock")]
+    public async Task<IActionResult> GetLowStock() => Ok(await _inventoryClient.GetLowStockItemsAsync());
 }
 
 public record RestockRequest(int Quantity);
