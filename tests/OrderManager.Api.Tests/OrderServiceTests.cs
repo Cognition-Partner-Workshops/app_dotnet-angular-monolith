@@ -1,10 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Moq;
-using Xunit;
-using Microsoft.EntityFrameworkCore;
 using OrderManager.Api.Data;
 using OrderManager.Api.Models;
 using OrderManager.Api.Services;
+using Xunit;
 
 namespace OrderManager.Api.Tests;
 
