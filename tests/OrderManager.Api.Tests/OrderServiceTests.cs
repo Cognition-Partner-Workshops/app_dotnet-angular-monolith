@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Moq;
 using Moq.Protected;
 using OrderManager.Api.Data;
+using OrderManager.Api.Models;
 using OrderManager.Api.Services;
 using System.Net;
 using System.Text.Json;
@@ -32,8 +33,8 @@ public class OrderServiceTests
             .ReturnsAsync(() =>
             {
                 var response = new HttpResponseMessage(statusCode);
-                if (json != null)
-                    response.Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+                if (jsonContent != null)
+                    response.Content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
                 return response;
             });
 
@@ -95,13 +96,12 @@ public class OrderServiceTests
 
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
-        Assert.NotNull(order);
         Assert.Single(order.Items);
-        Assert.Equal(5, order.Items.First().Quantity);
+        Assert.Equal(product.Price * 5, order.TotalAmount);
     }
 
     [Fact]
-    public async Task CreateOrder_ThrowsOnInsufficientStock()
+    public async Task CreateOrder_ThrowsWhenInventoryServiceReturnsConflict()
     {
         using var context = CreateContext();
         var product = await context.Products.FirstAsync();
