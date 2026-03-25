@@ -73,18 +73,15 @@ public class OrderServiceTests
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
-        var deductedItem = new InventoryItemDto
-        {
-            Id = 1, ProductId = product.Id, ProductName = product.Name,
-            QuantityOnHand = 45, ReorderLevel = 10, WarehouseLocation = "A-01"
-        };
+        var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
         Assert.NotNull(order);
         Assert.Single(order.Items);
+        Assert.Equal(product.Price * 5, order.TotalAmount);
     }
 
     [Fact]
-    public async Task CreateOrder_ThrowsWhenInventoryServiceReturnsConflict()
+    public async Task CreateOrder_ThrowsWhenInsufficientStock()
     {
         using var context = CreateContext();
         var inventoryClient = new FakeInventoryServiceClient();
@@ -92,36 +89,7 @@ public class OrderServiceTests
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
-        var responses = new Dictionary<string, HttpResponseMessage>
-        {
-            [$"api/inventory/product/{product.Id}/check?quantity=99999"] = new(HttpStatusCode.OK)
-            {
-                Content = JsonContent.Create(new { productId = product.Id, quantity = 99999, available = false })
-            }
-        };
-
-        var inventoryService = CreateInventoryService(responses);
-        var service = new OrderService(context, inventoryService);
-
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 99999) }));
-    }
-}
-
-public class FakeHttpMessageHandler : HttpMessageHandler
-{
-    private readonly Dictionary<string, HttpResponseMessage> _responses;
-
-    public FakeHttpMessageHandler(Dictionary<string, HttpResponseMessage> responses)
-    {
-        _responses = responses;
-    }
-
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-    {
-        var path = request.RequestUri?.PathAndQuery.TrimStart('/') ?? string.Empty;
-        if (_responses.TryGetValue(path, out var response))
-            return Task.FromResult(response);
-        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
     }
 }
