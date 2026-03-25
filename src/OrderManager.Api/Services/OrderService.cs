@@ -7,12 +7,12 @@ namespace OrderManager.Api.Services;
 public class OrderService
 {
     private readonly AppDbContext _context;
-    private readonly InventoryServiceClient _inventoryClient;
+    private readonly InventoryService _inventoryService;
 
-    public OrderService(AppDbContext context, InventoryServiceClient inventoryClient)
+    public OrderService(AppDbContext context, InventoryService inventoryService)
     {
         _context = context;
-        _inventoryClient = inventoryClient;
+        _inventoryService = inventoryService;
     }
 
     public async Task<List<Order>> GetAllOrdersAsync()
@@ -37,33 +37,22 @@ public class OrderService
         var customer = await _context.Customers.FindAsync(customerId)
             ?? throw new ArgumentException($"Customer {customerId} not found");
 
-        // Reserve stock atomically via the inventory microservice
-        var reservationRequest = new StockReservationRequest
-        {
-            Items = items.Select(i => new StockReservationItem
-            {
-                ProductId = i.ProductId,
-                Quantity = i.Quantity
-            }).ToList()
-        };
-
-        var reservationResult = await _inventoryClient.CheckAndReserveStockAsync(reservationRequest);
-        if (!reservationResult.Success)
-        {
-            throw new InvalidOperationException($"Stock reservation failed: {reservationResult.Message}");
-        }
-
         var order = new Order
         {
             CustomerId = customerId,
             ShippingAddress = $"{customer.Address}, {customer.City}, {customer.State} {customer.ZipCode}"
         };
 
-        // Check stock availability via inventory-service before creating order
         foreach (var (productId, quantity) in items)
         {
             var product = await _context.Products.FindAsync(productId)
                 ?? throw new ArgumentException($"Product {productId} not found");
+
+            var available = await _inventoryService.CheckStockAsync(productId, quantity);
+            if (!available)
+                throw new InvalidOperationException($"Insufficient stock for {product.Name}");
+
+            await _inventoryService.DeductStockAsync(productId, quantity);
 
             order.Items.Add(new OrderItem
             {
@@ -76,9 +65,6 @@ public class OrderService
         order.TotalAmount = order.Items.Sum(i => i.Quantity * i.UnitPrice);
         _context.Orders.Add(order);
         await _context.SaveChangesAsync();
-
-        // Stock was already reserved via CheckAndReserveStockAsync above
-
         return order;
     }
 
