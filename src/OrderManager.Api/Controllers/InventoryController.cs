@@ -3,17 +3,13 @@ using OrderManager.Api.Services;
 
 namespace OrderManager.Api.Controllers;
 
-/// <summary>
-/// Inventory controller that proxies requests to the inventory microservice.
-/// Maintains backward-compatible API surface for existing Angular frontend.
-/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class InventoryController : ControllerBase
 {
-    private readonly IInventoryServiceClient _inventoryService;
+    private readonly InventoryApiClient _inventoryClient;
 
-    public InventoryController(IInventoryServiceClient inventoryService)
+    public InventoryController(InventoryApiClient inventoryClient)
     {
         _inventoryService = inventoryService;
     }
@@ -38,19 +34,12 @@ public class InventoryController : ControllerBase
     [HttpPost("product/{productId}/deduct")]
     public async Task<IActionResult> Deduct(int productId, [FromBody] DeductRequest request)
     {
-        try
-        {
-            var item = await _inventoryService.DeductStockAsync(productId, request.Quantity);
-            return Ok(item);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new { error = ex.Message });
-        }
+        var success = await _inventoryClient.CheckAndDeductStockAsync(productId, request.Quantity);
+        return success ? Ok() : Conflict(new { error = "Insufficient stock" });
     }
 
     [HttpGet("low-stock")]
-    public async Task<IActionResult> GetLowStock() => Ok(await _inventoryService.GetLowStockItemsAsync());
+    public async Task<IActionResult> GetLowStock() => Ok(await _inventoryClient.GetLowStockItemsAsync());
 }
 
 public record RestockRequest(int Quantity);
