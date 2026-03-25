@@ -58,9 +58,11 @@ public class InventoryController : ControllerBase
     /// <param name="productId">The product identifier.</param>
     /// <param name="request">Deduction details including quantity to remove.</param>
     /// <response code="200">Stock was successfully deducted.</response>
+    /// <response code="404">No inventory record exists for this product.</response>
     /// <response code="409">Insufficient stock to fulfil the deduction.</response>
     [HttpPost("product/{productId}/deduct")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Deduct(int productId, [FromBody] DeductRequest request)
     {
