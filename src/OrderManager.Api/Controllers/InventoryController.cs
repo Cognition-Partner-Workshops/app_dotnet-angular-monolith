@@ -15,23 +15,23 @@ public class InventoryController : ControllerBase
 
     public InventoryController(InventoryServiceClient inventoryClient)
     {
-        _inventoryApiClient = inventoryApiClient;
+        _inventoryClient = inventoryClient;
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll() => Ok(await _inventoryApiClient.GetAllInventoryAsync());
+    public async Task<IActionResult> GetAll() => Ok(await _inventoryClient.GetAllInventoryAsync());
 
     [HttpGet("product/{productId}")]
     public async Task<IActionResult> GetByProduct(int productId)
     {
-        var item = await _inventoryApiClient.GetInventoryByProductIdAsync(productId);
+        var item = await _inventoryClient.GetInventoryByProductIdAsync(productId);
         return item is null ? NotFound() : Ok(item);
     }
 
     [HttpPost("product/{productId}/restock")]
     public async Task<IActionResult> Restock(int productId, [FromBody] RestockRequest request)
     {
-        var item = await _inventoryApiClient.RestockAsync(productId, request.Quantity);
+        var item = await _inventoryClient.RestockAsync(productId, request.Quantity);
         return Ok(item);
     }
 
@@ -47,14 +47,17 @@ public class InventoryController : ControllerBase
         {
             return Conflict(new { error = ex.Message });
         }
-        catch (ArgumentException ex)
-        {
-            return NotFound(new { error = ex.Message });
-        }
     }
 
     [HttpGet("low-stock")]
     public async Task<IActionResult> GetLowStock() => Ok(await _inventoryClient.GetLowStockItemsAsync());
+
+    [HttpGet("product/{productId}/check")]
+    public async Task<IActionResult> CheckStock(int productId, [FromQuery] int quantity = 1)
+    {
+        var available = await _inventoryClient.CheckStockAsync(productId, quantity);
+        return Ok(new { productId, quantity, available });
+    }
 }
 
 public record RestockRequest(int Quantity);
