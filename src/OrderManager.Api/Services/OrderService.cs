@@ -12,8 +12,7 @@ public class OrderService
     public OrderService(AppDbContext context, InventoryServiceClient inventoryClient)
     {
         _context = context;
-        _inventoryApiClient = inventoryApiClient;
-        _logger = logger;
+        _inventoryClient = inventoryClient;
     }
 
     public async Task<List<Order>> GetAllOrdersAsync()
@@ -77,14 +76,6 @@ public class OrderService
         order.TotalAmount = order.Items.Sum(i => i.Quantity * i.UnitPrice);
         _context.Orders.Add(order);
         await _context.SaveChangesAsync();
-
-        // Deduct stock via inventory-service after order is persisted
-        foreach (var item in order.Items)
-        {
-            await _inventoryApiClient.DeductStockAsync(item.ProductId, item.Quantity);
-            _logger.LogInformation("Deducted {Quantity} units of product {ProductId} via inventory service", item.Quantity, item.ProductId);
-        }
-
         return order;
     }
 
