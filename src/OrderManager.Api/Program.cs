@@ -7,21 +7,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=ordermanager.db"));
 
-// Register the inventory service client — use HTTP client when InventoryServiceUrl is configured,
-// otherwise fall back to the local database implementation.
-var inventoryServiceUrl = builder.Configuration["InventoryServiceUrl"];
-if (!string.IsNullOrEmpty(inventoryServiceUrl))
+// Register the inventory service client — calls the inventory microservice via HTTP
+var inventoryServiceUrl = builder.Configuration["InventoryServiceUrl"]
+    ?? builder.Configuration["ServiceUrls:InventoryService"]
+    ?? "http://localhost:5100";
+builder.Services.AddHttpClient<IInventoryServiceClient, InventoryHttpClient>(client =>
 {
-    builder.Services.AddHttpClient<IInventoryServiceClient, InventoryHttpClient>(client =>
-    {
-        client.BaseAddress = new Uri(inventoryServiceUrl);
-        client.Timeout = TimeSpan.FromSeconds(30);
-    });
-}
-else
-{
-    builder.Services.AddScoped<IInventoryServiceClient, InventoryService>();
-}
+    client.BaseAddress = new Uri(inventoryServiceUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
 
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<ProductService>();
