@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using OrderManager.Api.Clients;
 using OrderManager.Api.Data;
 using OrderManager.Api.Models;
 
@@ -7,9 +8,9 @@ namespace OrderManager.Api.Services;
 public class OrderService
 {
     private readonly AppDbContext _context;
-    private readonly InventoryHttpClient _inventoryClient;
+    private readonly IInventoryClient _inventoryClient;
 
-    public OrderService(AppDbContext context, InventoryHttpClient inventoryClient)
+    public OrderService(AppDbContext context, IInventoryClient inventoryClient)
     {
         _context = context;
         _inventoryClient = inventoryClient;
@@ -43,13 +44,15 @@ public class OrderService
             ShippingAddress = $"{customer.Address}, {customer.City}, {customer.State} {customer.ZipCode}"
         };
 
+        // Check stock availability via inventory-service before creating order
         foreach (var (productId, quantity) in items)
         {
             var product = await _context.Products.FindAsync(productId)
                 ?? throw new ArgumentException($"Product {productId} not found");
 
-            // Deduct stock via the inventory microservice HTTP API
-            await _inventoryClient.DeductStockAsync(productId, quantity);
+            var available = await _inventoryClient.CheckStockAsync(productId, quantity);
+            if (!available)
+                throw new InvalidOperationException($"Insufficient stock for {product.Name}");
 
             order.Items.Add(new OrderItem
             {
@@ -62,6 +65,13 @@ public class OrderService
         order.TotalAmount = order.Items.Sum(i => i.Quantity * i.UnitPrice);
         _context.Orders.Add(order);
         await _context.SaveChangesAsync();
+
+        // Deduct stock via inventory-service after order is persisted
+        foreach (var item in order.Items)
+        {
+            await _inventoryClient.DeductStockAsync(item.ProductId, item.Quantity);
+        }
+
         return order;
     }
 
