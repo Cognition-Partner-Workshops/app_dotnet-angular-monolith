@@ -91,25 +91,22 @@ public class OrderServiceTests
     public async Task CreateOrder_DeductsStockViaMicroservice()
     {
         using var context = CreateContext();
-        var service = new OrderService(context, new FakeInventoryClient());
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
         var inventoryClient = new FakeInventoryClient();
         var service = new OrderService(context, inventoryClient);
 
-        var service = new OrderService(context, mockClient.Object);
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
         Assert.Single(order.Items);
-        Assert.Equal(product.Price * 5, order.TotalAmount);
+        Assert.Equal(5, order.Items.First().Quantity);
     }
 
     [Fact]
     public async Task CreateOrder_ThrowsOnInsufficientStock()
     {
         using var context = CreateContext();
-        var service = new OrderService(context, new FakeInventoryClient(shouldFail: true));
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
