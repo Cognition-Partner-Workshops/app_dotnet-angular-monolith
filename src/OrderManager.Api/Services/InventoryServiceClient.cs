@@ -1,5 +1,4 @@
 using System.Net.Http.Json;
-using OrderManager.Api.Models;
 
 namespace OrderManager.Api.Services;
 
