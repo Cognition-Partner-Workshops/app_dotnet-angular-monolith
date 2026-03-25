@@ -4,7 +4,7 @@ using OrderManager.Api.Services;
 namespace OrderManager.Api.Controllers;
 
 /// <summary>
-/// Inventory controller that proxies requests to the inventory microservice.
+/// Proxies inventory requests to the inventory-service microservice.
 /// Maintains backward-compatible API surface for existing Angular frontend.
 /// </summary>
 [ApiController]
@@ -15,23 +15,23 @@ public class InventoryController : ControllerBase
 
     public InventoryController(InventoryServiceClient inventoryClient)
     {
-        _inventoryApiClient = inventoryApiClient;
+        _inventoryClient = inventoryClient;
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll() => Ok(await _inventoryApiClient.GetAllInventoryAsync());
+    public async Task<IActionResult> GetAll() => Ok(await _inventoryClient.GetAllInventoryAsync());
 
     [HttpGet("product/{productId}")]
     public async Task<IActionResult> GetByProduct(int productId)
     {
-        var item = await _inventoryApiClient.GetInventoryByProductIdAsync(productId);
+        var item = await _inventoryClient.GetInventoryByProductIdAsync(productId);
         return item is null ? NotFound() : Ok(item);
     }
 
     [HttpPost("product/{productId}/restock")]
     public async Task<IActionResult> Restock(int productId, [FromBody] RestockRequest request)
     {
-        var item = await _inventoryApiClient.RestockAsync(productId, request.Quantity);
+        var item = await _inventoryClient.RestockAsync(productId, request.Quantity);
         return Ok(item);
     }
 
@@ -46,10 +46,6 @@ public class InventoryController : ControllerBase
         catch (InvalidOperationException ex)
         {
             return Conflict(new { error = ex.Message });
-        }
-        catch (ArgumentException ex)
-        {
-            return NotFound(new { error = ex.Message });
         }
     }
 
