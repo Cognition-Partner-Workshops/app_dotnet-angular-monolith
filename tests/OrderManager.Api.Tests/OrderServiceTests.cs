@@ -1,9 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
-using Xunit;
 using OrderManager.Api.Data;
+using OrderManager.Api.Models;
 using OrderManager.Api.Services;
+using Xunit;
 
 namespace OrderManager.Api.Tests;
 
@@ -19,93 +20,93 @@ public class OrderServiceTests
         return context;
     }
 
-    private static InventoryService CreateInventoryService(bool stockAvailable = true)
+    private static InventoryServiceClient CreateClient(HttpStatusCode statusCode, InventoryItem? responseItem = null)
     {
-        var handler = new FakeInventoryHandler(stockAvailable);
-        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://fake-inventory") };
-        return new InventoryService(httpClient);
+        var item = responseItem ?? new InventoryItem
+        {
+            Id = 1, ProductId = 1, ProductName = "Widget A",
+            QuantityOnHand = 95, ReorderLevel = 10,
+            WarehouseLocation = "A-01", LastRestocked = DateTime.UtcNow
+        };
+        string? json = statusCode == HttpStatusCode.OK
+            ? System.Text.Json.JsonSerializer.Serialize(item)
+            : null;
+        var handler = new FakeHttpHandler(statusCode, json);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost:5100") };
+        var logger = new FakeLogger();
+        return new InventoryServiceClient(httpClient, logger);
     }
 
     [Fact]
     public async Task GetAllOrders_ReturnsEmptyList_WhenNoOrders()
     {
         using var context = CreateContext();
-        var inventoryService = CreateInventoryService();
-        var service = new OrderService(context, inventoryService);
+        var inventoryClient = CreateClient(HttpStatusCode.OK);
+        var service = new OrderService(context, inventoryClient);
         var orders = await service.GetAllOrdersAsync();
         Assert.Empty(orders);
     }
 
     [Fact]
-    public async Task CreateOrder_DeductsStockViaInventoryService()
+    public async Task CreateOrder_CallsInventoryService()
     {
         using var context = CreateContext();
-        var inventoryService = CreateInventoryService(stockAvailable: true);
-        var service = new OrderService(context, inventoryService);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
+
+        var deductedItem = new InventoryItem
+        {
+            Id = 1, ProductId = product.Id, ProductName = product.Name,
+            QuantityOnHand = 95, ReorderLevel = 10, WarehouseLocation = "A-01"
+        };
+        var inventoryClient = CreateClient(HttpStatusCode.OK, deductedItem);
+        var service = new OrderService(context, inventoryClient);
 
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
-        Assert.NotNull(order);
         Assert.Single(order.Items);
-        Assert.Equal(5, order.Items.First().Quantity);
+        Assert.Equal(product.Price * 5, order.TotalAmount);
     }
 
     [Fact]
-    public async Task CreateOrder_ThrowsOnInsufficientStock()
+    public async Task CreateOrder_ThrowsWhenInventoryServiceReturnsConflict()
     {
         using var context = CreateContext();
-        var inventoryService = CreateInventoryService(stockAvailable: false);
-        var service = new OrderService(context, inventoryService);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
+
+        var inventoryClient = CreateClient(HttpStatusCode.Conflict);
+        var service = new OrderService(context, inventoryClient);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 99999) }));
     }
 }
 
-public class FakeInventoryHandler : HttpMessageHandler
+public class FakeHttpHandler : HttpMessageHandler
 {
-    private readonly bool _stockAvailable;
+    private readonly HttpStatusCode _statusCode;
+    private readonly string? _responseJson;
 
-    public FakeInventoryHandler(bool stockAvailable = true)
+    public FakeHttpHandler(HttpStatusCode statusCode, string? responseJson)
     {
-        _stockAvailable = stockAvailable;
+        _statusCode = statusCode;
+        _responseJson = responseJson;
     }
 
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        var path = request.RequestUri?.PathAndQuery ?? "";
-
-        if (path.Contains("/check"))
-        {
-            var response = new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = JsonContent.Create(new { productId = 1, quantity = 1, available = _stockAvailable })
-            };
-            return Task.FromResult(response);
-        }
-
-        if (path.Contains("/deduct"))
-        {
-            if (!_stockAvailable)
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Conflict));
-
-            var dto = new InventoryItemDto
-            {
-                Id = 1, ProductId = 1, ProductName = "Widget A",
-                QuantityOnHand = 45, ReorderLevel = 10,
-                WarehouseLocation = "A-01", LastRestocked = DateTime.UtcNow
-            };
-            var response = new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = JsonContent.Create(dto)
-            };
-            return Task.FromResult(response);
-        }
-
-        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        var response = new HttpResponseMessage(_statusCode);
+        if (_responseJson != null)
+            response.Content = new StringContent(_responseJson, System.Text.Encoding.UTF8, "application/json");
+        return Task.FromResult(response);
     }
+}
+
+public class FakeLogger : Microsoft.Extensions.Logging.ILogger<InventoryServiceClient>
+{
+    public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+    public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => false;
+    public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, Microsoft.Extensions.Logging.EventId eventId,
+        TState state, Exception? exception, Func<TState, Exception?, string> formatter) { }
 }

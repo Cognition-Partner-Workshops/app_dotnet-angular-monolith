@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using OrderManager.Api.Models;
 
 namespace OrderManager.Api.Services;
 
@@ -17,42 +18,42 @@ public class InventoryServiceClient
         _logger = logger;
     }
 
-    public async Task<List<InventoryItemDto>> GetAllInventoryAsync()
+    public async Task<List<InventoryItem>> GetAllInventoryAsync()
     {
         _logger.LogInformation("Fetching all inventory from inventory-service");
-        var items = await _httpClient.GetFromJsonAsync<List<InventoryItemDto>>("api/inventory");
-        return items ?? new List<InventoryItemDto>();
+        var items = await _httpClient.GetFromJsonAsync<List<InventoryItem>>("api/inventory");
+        return items ?? new List<InventoryItem>();
     }
 
-    public async Task<InventoryItemDto?> GetInventoryByProductIdAsync(int productId)
+    public async Task<InventoryItem?> GetInventoryByProductIdAsync(int productId)
     {
         _logger.LogInformation("Fetching inventory for product {ProductId}", productId);
         var response = await _httpClient.GetAsync($"api/inventory/product/{productId}");
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             return null;
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<InventoryItemDto>();
+        return await response.Content.ReadFromJsonAsync<InventoryItem>();
     }
 
-    public async Task<InventoryItemDto> RestockAsync(int productId, int quantity)
+    public async Task<InventoryItem> RestockAsync(int productId, int quantity)
     {
         _logger.LogInformation("Restocking product {ProductId} with {Quantity}", productId, quantity);
         var response = await _httpClient.PostAsJsonAsync(
             $"api/inventory/product/{productId}/restock",
             new { Quantity = quantity });
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<InventoryItemDto>()
+        return await response.Content.ReadFromJsonAsync<InventoryItem>()
             ?? throw new InvalidOperationException("Restock returned null response");
     }
 
-    public async Task<List<InventoryItemDto>> GetLowStockItemsAsync()
+    public async Task<List<InventoryItem>> GetLowStockItemsAsync()
     {
         _logger.LogInformation("Fetching low-stock items from inventory-service");
-        var items = await _httpClient.GetFromJsonAsync<List<InventoryItemDto>>("api/inventory/low-stock");
-        return items ?? new List<InventoryItemDto>();
+        var items = await _httpClient.GetFromJsonAsync<List<InventoryItem>>("api/inventory/low-stock");
+        return items ?? new List<InventoryItem>();
     }
 
-    public async Task<InventoryItemDto?> DeductStockAsync(int productId, int quantity)
+    public async Task<InventoryItem?> DeductStockAsync(int productId, int quantity)
     {
         _logger.LogInformation("Deducting {Quantity} from product {ProductId} via inventory-service", quantity, productId);
         var response = await _httpClient.PostAsJsonAsync(
@@ -63,9 +64,9 @@ public class InventoryServiceClient
             var error = await response.Content.ReadAsStringAsync();
             throw new InvalidOperationException($"Insufficient stock for product {productId}. Service response: {error}");
         }
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            return null;
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<InventoryItemDto>();
+        return await response.Content.ReadFromJsonAsync<InventoryItem>();
     }
 }
-
-// InventoryItemDto is defined in InventoryService.cs
