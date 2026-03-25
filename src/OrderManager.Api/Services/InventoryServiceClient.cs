@@ -81,6 +81,28 @@ public class InventoryServiceClient
         }
     }
 
+    public async Task<InventoryItemDto> DeductStockAsync(int productId, int quantity)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync(
+                $"api/inventory/product/{productId}/deduct",
+                new { Quantity = quantity });
+            if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+                throw new InvalidOperationException($"Insufficient stock for product {productId}");
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                throw new ArgumentException($"No inventory record for product {productId}");
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<InventoryItemDto>()
+                ?? throw new InvalidOperationException("Deduct returned null response");
+        }
+        catch (Exception ex) when (ex is not InvalidOperationException && ex is not ArgumentException)
+        {
+            _logger.LogError(ex, "Failed to deduct stock for product {ProductId} via inventory-service", productId);
+            throw;
+        }
+    }
+
     public async Task<StockReservationResponse> CheckAndReserveStockAsync(StockReservationRequest request)
     {
         try
