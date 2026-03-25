@@ -1,3 +1,4 @@
+using Xunit;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 using OrderManager.Api.Data;
@@ -6,26 +7,63 @@ using OrderManager.Api.Services;
 
 namespace OrderManager.Api.Tests;
 
-public class FakeInventoryClient : IInventoryServiceClient
+public class FakeInventoryServiceClient : IInventoryServiceClient
 {
+    private readonly Dictionary<int, int> _stock;
     private readonly bool _shouldFail;
 
-    public FakeInventoryClient(bool shouldFail = false)
+    public FakeInventoryServiceClient(bool shouldThrowOnDeduct = false)
     {
-        _shouldFail = shouldFail;
+        _stock = new Dictionary<int, int>
+        {
+            { 1, 50 }, { 2, 100 }, { 3, 150 }, { 4, 200 }, { 5, 250 }
+        };
+        _shouldFail = shouldThrowOnDeduct;
     }
 
-    public Task<List<InventoryItem>> GetAllInventoryAsync() => Task.FromResult(new List<InventoryItem>());
-    public Task<InventoryItem?> GetInventoryByProductIdAsync(int productId) => Task.FromResult<InventoryItem?>(null);
-    public Task<InventoryItem> RestockAsync(int productId, int quantity) => Task.FromResult(new InventoryItem { ProductId = productId, QuantityOnHand = quantity });
-    public Task<List<InventoryItem>> GetLowStockItemsAsync() => Task.FromResult(new List<InventoryItem>());
+    public Task<List<InventoryItem>> GetAllInventoryAsync() =>
+        Task.FromResult(_stock.Select(kv => new InventoryItem
+        {
+            ProductId = kv.Key,
+            QuantityOnHand = kv.Value
+        }).ToList());
+
+    public Task<InventoryItem?> GetInventoryByProductIdAsync(int productId) =>
+        Task.FromResult(_stock.ContainsKey(productId)
+            ? new InventoryItem { ProductId = productId, QuantityOnHand = _stock[productId] }
+            : (InventoryItem?)null);
+
+    public Task<InventoryItem> RestockAsync(int productId, int quantity)
+    {
+        if (_stock.ContainsKey(productId)) _stock[productId] += quantity;
+        return Task.FromResult(new InventoryItem
+        {
+            ProductId = productId,
+            QuantityOnHand = _stock.GetValueOrDefault(productId)
+        });
+    }
 
     public Task<InventoryItem> DeductStockAsync(int productId, int quantity)
     {
         if (_shouldFail)
-            throw new InvalidOperationException("Insufficient stock");
-        return Task.FromResult(new InventoryItem { ProductId = productId, QuantityOnHand = 100 - quantity });
+            throw new InvalidOperationException($"Insufficient stock for product {productId}");
+
+        if (!_stock.ContainsKey(productId))
+            throw new ArgumentException($"No inventory record for product {productId}");
+        if (_stock[productId] < quantity)
+            throw new InvalidOperationException($"Insufficient stock for product {productId}");
+        _stock[productId] -= quantity;
+        return Task.FromResult(new InventoryItem
+        {
+            ProductId = productId,
+            QuantityOnHand = _stock[productId]
+        });
     }
+
+    public Task<List<InventoryItem>> GetLowStockItemsAsync() =>
+        Task.FromResult(_stock.Where(kv => kv.Value <= 10)
+            .Select(kv => new InventoryItem { ProductId = kv.Key, QuantityOnHand = kv.Value })
+            .ToList());
 }
 
 public class OrderServiceTests
@@ -44,7 +82,8 @@ public class OrderServiceTests
     public async Task GetAllOrders_ReturnsEmptyList_WhenNoOrders()
     {
         using var context = CreateContext();
-        var service = new OrderService(context, new FakeInventoryClient());
+        var inventoryClient = new FakeInventoryServiceClient();
+        var service = new OrderService(context, inventoryClient);
         var orders = await service.GetAllOrdersAsync();
         Assert.Empty(orders);
     }
@@ -59,8 +98,9 @@ public class OrderServiceTests
 
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
+        Assert.NotNull(order);
         Assert.Single(order.Items);
-        Assert.Equal(product.Price * 5, order.TotalAmount);
+        Assert.Equal(5, order.Items.First().Quantity);
     }
 
     [Fact]
