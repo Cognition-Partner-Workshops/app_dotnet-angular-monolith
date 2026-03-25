@@ -7,10 +7,12 @@ namespace OrderManager.Api.Services;
 public class OrderService
 {
     private readonly AppDbContext _context;
+    private readonly InventoryService _inventoryService;
 
-    public OrderService(AppDbContext context)
+    public OrderService(AppDbContext context, InventoryService inventoryService)
     {
         _context = context;
+        _inventoryService = inventoryService;
     }
 
     public async Task<List<Order>> GetAllOrdersAsync()
@@ -41,18 +43,15 @@ public class OrderService
             ShippingAddress = $"{customer.Address}, {customer.City}, {customer.State} {customer.ZipCode}"
         };
 
+        // Check stock availability via inventory-service before creating order
         foreach (var (productId, quantity) in items)
         {
             var product = await _context.Products.FindAsync(productId)
                 ?? throw new ArgumentException($"Product {productId} not found");
 
-            var inventory = await _context.InventoryItems.FirstOrDefaultAsync(i => i.ProductId == productId)
-                ?? throw new InvalidOperationException($"No inventory record for product {productId}");
-
-            if (inventory.QuantityOnHand < quantity)
-                throw new InvalidOperationException($"Insufficient stock for {product.Name}. Available: {inventory.QuantityOnHand}");
-
-            inventory.QuantityOnHand -= quantity;
+            var available = await _inventoryService.CheckStockAsync(productId, quantity);
+            if (!available)
+                throw new InvalidOperationException($"Insufficient stock for {product.Name}");
 
             order.Items.Add(new OrderItem
             {
@@ -65,6 +64,13 @@ public class OrderService
         order.TotalAmount = order.Items.Sum(i => i.Quantity * i.UnitPrice);
         _context.Orders.Add(order);
         await _context.SaveChangesAsync();
+
+        // Deduct stock via inventory-service after order is persisted
+        foreach (var item in order.Items)
+        {
+            await _inventoryService.DeductStockAsync(item.ProductId, item.Quantity);
+        }
+
         return order;
     }
 
