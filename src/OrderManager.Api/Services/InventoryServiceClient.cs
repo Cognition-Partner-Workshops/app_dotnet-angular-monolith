@@ -52,7 +52,7 @@ public class InventoryServiceClient : IInventoryServiceClient
     public async Task<InventoryItem> DeductStockAsync(int productId, int quantity)
     {
         var response = await _httpClient.PostAsJsonAsync(
-            $"api/inventory/product/{productId}/deduct",
+            $"api/inventory/product/{productId}/decrement",
             new { Quantity = quantity });
 
         if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
