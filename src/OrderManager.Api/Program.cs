@@ -11,7 +11,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 var inventoryServiceUrl = builder.Configuration["InventoryService:BaseUrl"] ?? "http://localhost:5100";
 builder.Services.AddHttpClient<IInventoryServiceClient, InventoryServiceHttpClient>(client =>
 {
-    client.BaseAddress = new Uri(inventoryServiceUrl);
+    var baseUrl = builder.Configuration["InventoryService:BaseUrl"] ?? "http://localhost:5002";
+    client.BaseAddress = new Uri(baseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
