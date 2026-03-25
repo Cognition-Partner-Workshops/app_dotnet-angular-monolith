@@ -1,18 +1,20 @@
-using Microsoft.EntityFrameworkCore;
-using Moq;
 using Xunit;
+using Microsoft.EntityFrameworkCore;
 using OrderManager.Api.Data;
 using OrderManager.Api.Models;
 using OrderManager.Api.Services;
 
 namespace OrderManager.Api.Tests;
 
-public class FakeInventoryClient : IInventoryServiceClient
+/// <summary>
+/// In-memory mock of IInventoryServiceClient for testing.
+/// </summary>
+public class FakeInventoryServiceClient : IInventoryServiceClient
 {
     private readonly Dictionary<int, int> _stock;
     private readonly bool _shouldFail;
 
-    public FakeInventoryClient(bool shouldFail = false)
+    public FakeInventoryServiceClient(bool shouldThrowOnDeduct = false)
     {
         _stock = new Dictionary<int, int>
         {
@@ -31,7 +33,7 @@ public class FakeInventoryClient : IInventoryServiceClient
     public Task<InventoryItem?> GetInventoryByProductIdAsync(int productId) =>
         Task.FromResult(_stock.ContainsKey(productId)
             ? new InventoryItem { ProductId = productId, QuantityOnHand = _stock[productId] }
-            : null);
+            : (InventoryItem?)null);
 
     public Task<InventoryItem> RestockAsync(int productId, int quantity)
     {
@@ -99,6 +101,7 @@ public class OrderServiceTests
 
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
+        Assert.NotNull(order);
         Assert.Single(order.Items);
         Assert.Equal(5, order.Items.First().Quantity);
     }
