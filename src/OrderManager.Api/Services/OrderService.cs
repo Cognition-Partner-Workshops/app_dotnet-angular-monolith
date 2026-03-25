@@ -7,12 +7,12 @@ namespace OrderManager.Api.Services;
 public class OrderService
 {
     private readonly AppDbContext _context;
-    private readonly IInventoryServiceClient _inventoryClient;
+    private readonly InventoryService _inventoryService;
 
-    public OrderService(AppDbContext context, IInventoryServiceClient inventoryClient)
+    public OrderService(AppDbContext context, InventoryService inventoryService)
     {
         _context = context;
-        _inventoryClient = inventoryClient;
+        _inventoryService = inventoryService;
     }
 
     public async Task<List<Order>> GetAllOrdersAsync()
@@ -49,7 +49,7 @@ public class OrderService
                 ?? throw new ArgumentException($"Product {productId} not found");
 
             // Deduct stock via the inventory microservice (throws on insufficient stock)
-            await _inventoryClient.DeductStockAsync(productId, quantity);
+            await _inventoryService.DeductStockAsync(productId, quantity);
 
             order.Items.Add(new OrderItem
             {
