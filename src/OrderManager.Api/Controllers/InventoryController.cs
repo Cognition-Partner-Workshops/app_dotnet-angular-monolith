@@ -4,15 +4,15 @@ using OrderManager.Api.Clients;
 namespace OrderManager.Api.Controllers;
 
 /// <summary>
-/// Proxies inventory requests to the inventory-service microservice via HTTP client.
+/// Proxies inventory requests to the inventory microservice.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class InventoryController : ControllerBase
 {
-    private readonly InventoryHttpClient _inventoryClient;
+    private readonly IInventoryServiceClient _inventoryClient;
 
-    public InventoryController(InventoryHttpClient inventoryClient)
+    public InventoryController(IInventoryServiceClient inventoryClient)
     {
         _inventoryClient = inventoryClient;
     }
@@ -30,8 +30,15 @@ public class InventoryController : ControllerBase
     [HttpPost("product/{productId}/restock")]
     public async Task<IActionResult> Restock(int productId, [FromBody] RestockRequest request)
     {
-        var item = await _inventoryClient.RestockAsync(productId, request.Quantity);
-        return Ok(item);
+        try
+        {
+            var item = await _inventoryClient.RestockAsync(productId, request.Quantity);
+            return Ok(item);
+        }
+        catch (ArgumentException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
     }
 
     [HttpGet("low-stock")]
@@ -40,22 +47,8 @@ public class InventoryController : ControllerBase
     [HttpGet("product/{productId}/check")]
     public async Task<IActionResult> CheckStock(int productId, [FromQuery] int quantity = 1)
     {
-        var available = await _inventoryClient.CheckStockAsync(productId, quantity);
-        return Ok(new { productId, quantity, available });
-    }
-
-    [HttpPost("product/{productId}/deduct")]
-    public async Task<IActionResult> DeductStock(int productId, [FromBody] DeductRequest request)
-    {
-        try
-        {
-            var item = await _inventoryClient.DeductStockAsync(productId, request.Quantity);
-            return Ok(item);
-        }
-        catch (HttpRequestException)
-        {
-            return StatusCode(502, new { error = "Inventory service unavailable" });
-        }
+        var stockLevel = await _inventoryClient.GetStockLevelAsync(productId);
+        return Ok(new { productId, quantity, available = stockLevel >= quantity });
     }
 }
 
