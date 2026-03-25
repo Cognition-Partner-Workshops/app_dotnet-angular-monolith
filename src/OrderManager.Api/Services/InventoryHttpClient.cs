@@ -48,10 +48,10 @@ public class InventoryHttpClient
             ?? throw new InvalidOperationException("Failed to deserialize restock response");
     }
 
-    public async Task<InventoryItemDto> DeductStockAsync(int productId, int quantity)
+    public async Task DeductStockAsync(int productId, int quantity)
     {
-        _logger.LogInformation("Deducting {Quantity} units from product {ProductId} via inventory-service", quantity, productId);
-        var response = await _httpClient.PostAsJsonAsync($"api/inventory/product/{productId}/deduct", new { Quantity = quantity });
+        _logger.LogInformation("Reserving (deducting) {Quantity} units from product {ProductId} via inventory-service", quantity, productId);
+        var response = await _httpClient.PostAsJsonAsync($"api/inventory/product/{productId}/reserve", new { Quantity = quantity });
 
         if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
         {
@@ -60,15 +60,8 @@ public class InventoryHttpClient
             throw new InvalidOperationException(error?.Error ?? "Insufficient stock");
         }
 
-        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-        {
-            _logger.LogWarning("No inventory record for product {ProductId}", productId);
-            throw new ArgumentException($"No inventory record for product {productId}");
-        }
-
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<InventoryItemDto>()
-            ?? throw new InvalidOperationException("Failed to deserialize deduct response");
+        _logger.LogInformation("Successfully reserved {Quantity} units for product {ProductId}", quantity, productId);
     }
 
     public async Task<List<InventoryItemDto>> GetLowStockItemsAsync()

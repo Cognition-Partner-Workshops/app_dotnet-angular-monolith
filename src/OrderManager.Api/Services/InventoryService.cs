@@ -28,9 +28,9 @@ public class InventoryService
         return await _inventoryClient.RestockAsync(productId, quantity);
     }
 
-    public async Task<InventoryItemDto> DeductStockAsync(int productId, int quantity)
+    public async Task DeductStockAsync(int productId, int quantity)
     {
-        return await _inventoryClient.DeductStockAsync(productId, quantity);
+        await _inventoryClient.DeductStockAsync(productId, quantity);
     }
 
     public async Task<List<InventoryItemDto>> GetLowStockItemsAsync()

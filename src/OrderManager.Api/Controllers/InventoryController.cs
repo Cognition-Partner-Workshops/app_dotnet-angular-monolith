@@ -43,12 +43,8 @@ public class InventoryController : ControllerBase
     {
         try
         {
-            var item = await _inventoryService.DeductStockAsync(productId, request.Quantity);
-            return Ok(item);
-        }
-        catch (ArgumentException ex)
-        {
-            return NotFound(new { error = ex.Message });
+            await _inventoryService.DeductStockAsync(productId, request.Quantity);
+            return Ok(new { reserved = true, productId, quantity = request.Quantity });
         }
         catch (InvalidOperationException ex)
         {

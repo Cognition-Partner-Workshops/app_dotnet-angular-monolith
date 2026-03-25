@@ -92,7 +92,7 @@ public class MockInventoryHandler : HttpMessageHandler
     {
         var path = request.RequestUri?.PathAndQuery ?? "";
 
-        if (path.Contains("/deduct"))
+        if (path.Contains("/reserve"))
         {
             DeductStockCalled = true;
 
@@ -106,11 +106,7 @@ public class MockInventoryHandler : HttpMessageHandler
 
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = JsonContent.Create(new InventoryItemDto
-                {
-                    Id = 1, ProductId = 1, ProductName = "Test", QuantityOnHand = 45,
-                    ReorderLevel = 10, WarehouseLocation = "A-01", LastRestocked = DateTime.UtcNow
-                })
+                Content = JsonContent.Create(new { reserved = true, productId = 1, quantity = 5 })
             });
         }
 
