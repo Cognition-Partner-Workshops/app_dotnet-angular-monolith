@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using OrderManager.Api.Clients;
 using OrderManager.Api.Data;
 using OrderManager.Api.Services;
 
@@ -14,6 +15,7 @@ builder.Services.AddHttpClient<InventoryHttpClient>(client =>
     client.BaseAddress = new Uri(inventoryServiceUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
 });
+builder.Services.AddScoped<IInventoryClient>(sp => sp.GetRequiredService<InventoryHttpClient>());
 
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<ProductService>();
