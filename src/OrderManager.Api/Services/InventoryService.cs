@@ -3,73 +3,69 @@ using System.Net.Http.Json;
 namespace OrderManager.Api.Services;
 
 /// <summary>
-/// HTTP client for communicating with the standalone inventory microservice.
-/// Replaces direct database access for inventory operations.
+/// HTTP client proxy that delegates inventory operations to the inventory-service microservice.
+/// Replaces the previous in-process implementation that used AppDbContext directly.
 /// </summary>
-public class InventoryServiceClient
+public class InventoryService
 {
     private readonly HttpClient _httpClient;
-    private readonly ILogger<InventoryServiceClient> _logger;
 
-    public InventoryServiceClient(HttpClient httpClient, ILogger<InventoryServiceClient> logger)
+    public InventoryService(HttpClient httpClient)
     {
         _httpClient = httpClient;
-        _logger = logger;
     }
 
     public async Task<List<InventoryItemDto>> GetAllInventoryAsync()
     {
-        _logger.LogInformation("Fetching all inventory from inventory-service");
         var items = await _httpClient.GetFromJsonAsync<List<InventoryItemDto>>("api/inventory");
         return items ?? new List<InventoryItemDto>();
     }
 
     public async Task<InventoryItemDto?> GetInventoryByProductIdAsync(int productId)
     {
-        _logger.LogInformation("Fetching inventory for product {ProductId}", productId);
         var response = await _httpClient.GetAsync($"api/inventory/product/{productId}");
-        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        if (!response.IsSuccessStatusCode)
             return null;
-        response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<InventoryItemDto>();
     }
 
     public async Task<InventoryItemDto> RestockAsync(int productId, int quantity)
     {
-        _logger.LogInformation("Restocking product {ProductId} with {Quantity}", productId, quantity);
         var response = await _httpClient.PostAsJsonAsync(
             $"api/inventory/product/{productId}/restock",
-            new { Quantity = quantity });
+            new { quantity });
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<InventoryItemDto>()
-            ?? throw new InvalidOperationException("Restock returned null response");
+            ?? throw new InvalidOperationException("Failed to deserialize restock response");
     }
 
     public async Task<List<InventoryItemDto>> GetLowStockItemsAsync()
     {
-        _logger.LogInformation("Fetching low-stock items from inventory-service");
         var items = await _httpClient.GetFromJsonAsync<List<InventoryItemDto>>("api/inventory/low-stock");
         return items ?? new List<InventoryItemDto>();
     }
 
-    public async Task<InventoryItemDto?> DeductStockAsync(int productId, int quantity)
+    public async Task<bool> CheckStockAsync(int productId, int quantity)
     {
-        _logger.LogInformation("Deducting {Quantity} from product {ProductId} via inventory-service", quantity, productId);
+        var response = await _httpClient.GetFromJsonAsync<StockCheckResponse>(
+            $"api/inventory/product/{productId}/check?quantity={quantity}");
+        return response?.Available ?? false;
+    }
+
+    public async Task<InventoryItemDto> DeductStockAsync(int productId, int quantity)
+    {
         var response = await _httpClient.PostAsJsonAsync(
             $"api/inventory/product/{productId}/deduct",
-            new { Quantity = quantity });
-        if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
-        {
-            var error = await response.Content.ReadAsStringAsync();
-            throw new InvalidOperationException($"Insufficient stock for product {productId}. Service response: {error}");
-        }
+            new { quantity });
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<InventoryItemDto>();
+        return await response.Content.ReadFromJsonAsync<InventoryItemDto>()
+            ?? throw new InvalidOperationException("Failed to deserialize deduct response");
     }
 }
 
 /// <summary>
-/// DTO for inventory items returned from the inventory microservice.
+/// DTO matching the inventory-service API response shape.
+/// Uses denormalized ProductName instead of a Product navigation property.
 /// </summary>
 public class InventoryItemDto
 {
@@ -80,4 +76,11 @@ public class InventoryItemDto
     public int ReorderLevel { get; set; }
     public string WarehouseLocation { get; set; } = string.Empty;
     public DateTime LastRestocked { get; set; }
+}
+
+public class StockCheckResponse
+{
+    public int ProductId { get; set; }
+    public int Quantity { get; set; }
+    public bool Available { get; set; }
 }
