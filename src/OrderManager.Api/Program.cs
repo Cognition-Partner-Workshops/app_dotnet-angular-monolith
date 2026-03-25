@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using OrderManager.Api.Clients;
 using OrderManager.Api.Data;
 using OrderManager.Api.Services;
 
@@ -8,10 +7,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=ordermanager.db"));
 
-builder.Services.AddHttpClient<IInventoryClient, InventoryHttpClient>(client =>
+var inventoryServiceUrl = builder.Configuration["InventoryService:BaseUrl"] ?? "http://localhost:5100";
+builder.Services.AddHttpClient<InventoryService>(client =>
 {
-    var baseUrl = builder.Configuration["InventoryService:BaseUrl"] ?? "http://localhost:5002";
-    client.BaseAddress = new Uri(baseUrl);
+    client.BaseAddress = new Uri(inventoryServiceUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
