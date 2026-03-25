@@ -16,13 +16,13 @@ public class InventoryService
         _httpClient = httpClient;
     }
 
-    public async Task<List<InventoryItemDto>> GetAllInventoryAsync()
+    public virtual async Task<List<InventoryItemDto>> GetAllInventoryAsync()
     {
         var items = await _httpClient.GetFromJsonAsync<List<InventoryItemDto>>("api/inventory");
         return items ?? new List<InventoryItemDto>();
     }
 
-    public async Task<InventoryItemDto?> GetInventoryByProductIdAsync(int productId)
+    public virtual async Task<InventoryItemDto?> GetInventoryByProductIdAsync(int productId)
     {
         var response = await _httpClient.GetAsync($"api/inventory/product/{productId}");
         if (!response.IsSuccessStatusCode)
@@ -30,7 +30,7 @@ public class InventoryService
         return await response.Content.ReadFromJsonAsync<InventoryItemDto>();
     }
 
-    public async Task<InventoryItemDto> RestockAsync(int productId, int quantity)
+    public virtual async Task<InventoryItemDto> RestockAsync(int productId, int quantity)
     {
         var response = await _httpClient.PostAsJsonAsync(
             $"api/inventory/product/{productId}/restock",
@@ -40,20 +40,20 @@ public class InventoryService
             ?? throw new InvalidOperationException("Failed to deserialize restock response");
     }
 
-    public async Task<List<InventoryItemDto>> GetLowStockItemsAsync()
+    public virtual async Task<List<InventoryItemDto>> GetLowStockItemsAsync()
     {
         var items = await _httpClient.GetFromJsonAsync<List<InventoryItemDto>>("api/inventory/low-stock");
         return items ?? new List<InventoryItemDto>();
     }
 
-    public async Task<bool> CheckStockAsync(int productId, int quantity)
+    public virtual async Task<bool> CheckStockAsync(int productId, int quantity)
     {
         var response = await _httpClient.GetFromJsonAsync<StockCheckResponse>(
             $"api/inventory/product/{productId}/check?quantity={quantity}");
         return response?.Available ?? false;
     }
 
-    public async Task<InventoryItemDto> DeductStockAsync(int productId, int quantity)
+    public virtual async Task<InventoryItemDto> DeductStockAsync(int productId, int quantity)
     {
         var response = await _httpClient.PostAsJsonAsync(
             $"api/inventory/product/{productId}/deduct",
