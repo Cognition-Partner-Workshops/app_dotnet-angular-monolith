@@ -2,8 +2,53 @@ using Microsoft.EntityFrameworkCore;
 using OrderManager.Api.Data;
 using OrderManager.Api.Models;
 using OrderManager.Api.Services;
+using Xunit;
 
 namespace OrderManager.Api.Tests;
+
+public class MockInventoryServiceClient : IInventoryServiceClient
+{
+    private readonly AppDbContext _context;
+
+    public MockInventoryServiceClient(AppDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<List<InventoryItem>> GetAllInventoryAsync()
+        => await _context.InventoryItems.ToListAsync();
+
+    public async Task<InventoryItem?> GetInventoryByProductIdAsync(int productId)
+        => await _context.InventoryItems.FirstOrDefaultAsync(i => i.ProductId == productId);
+
+    public async Task<InventoryItem> RestockAsync(int productId, int quantity)
+    {
+        var item = await _context.InventoryItems.FirstAsync(i => i.ProductId == productId);
+        item.QuantityOnHand += quantity;
+        await _context.SaveChangesAsync();
+        return item;
+    }
+
+    public async Task<List<InventoryItem>> GetLowStockItemsAsync()
+        => await _context.InventoryItems.Where(i => i.QuantityOnHand <= i.ReorderLevel).ToListAsync();
+
+    public async Task<InventoryItem?> DeductStockAsync(int productId, int quantity)
+    {
+        var item = await _context.InventoryItems.FirstOrDefaultAsync(i => i.ProductId == productId);
+        if (item == null) return null;
+        if (item.QuantityOnHand < quantity)
+            throw new InvalidOperationException($"Insufficient stock for product {productId}");
+        item.QuantityOnHand -= quantity;
+        await _context.SaveChangesAsync();
+        return item;
+    }
+
+    public async Task<int> GetStockLevelAsync(int productId)
+    {
+        var item = await _context.InventoryItems.FirstOrDefaultAsync(i => i.ProductId == productId);
+        return item?.QuantityOnHand ?? 0;
+    }
+}
 
 public class OrderServiceTests
 {
@@ -21,7 +66,8 @@ public class OrderServiceTests
     public async Task GetAllOrders_ReturnsEmptyList_WhenNoOrders()
     {
         using var context = CreateContext();
-        var service = new OrderService(context);
+        var inventoryClient = new MockInventoryServiceClient(context);
+        var service = new OrderService(context, inventoryClient);
         var orders = await service.GetAllOrdersAsync();
         Assert.Empty(orders);
     }
@@ -30,7 +76,8 @@ public class OrderServiceTests
     public async Task CreateOrder_DeductsInventory()
     {
         using var context = CreateContext();
-        var service = new OrderService(context);
+        var inventoryClient = new MockInventoryServiceClient(context);
+        var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
         var inventoryBefore = await context.InventoryItems.FirstAsync(i => i.ProductId == product.Id);
@@ -46,7 +93,8 @@ public class OrderServiceTests
     public async Task CreateOrder_ThrowsOnInsufficientStock()
     {
         using var context = CreateContext();
-        var service = new OrderService(context);
+        var inventoryClient = new MockInventoryServiceClient(context);
+        var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
