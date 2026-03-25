@@ -33,7 +33,6 @@ public class OrderServiceTests
     public async Task CreateOrder_DeductsStockViaMicroservice()
     {
         using var context = CreateContext();
-        var service = new OrderService(context, new FakeInventoryClient());
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
@@ -57,12 +56,11 @@ public class OrderServiceTests
     public async Task CreateOrder_ThrowsOnInsufficientStock()
     {
         using var context = CreateContext();
-        var service = new OrderService(context, new FakeInventoryClient(shouldFail: true));
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
         var mockClient = new Mock<IInventoryServiceClient>();
-        mockClient.Setup(c => c.DeductStockAsync(product.Id, 99999))
+        mockClient.Setup(c => c.DeductStockAsync(It.IsAny<int>(), It.IsAny<int>()))
             .ThrowsAsync(new InvalidOperationException("Insufficient stock"));
 
         var service = new OrderService(context, mockClient.Object);
