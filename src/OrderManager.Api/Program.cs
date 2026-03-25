@@ -7,10 +7,25 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=ordermanager.db"));
 
+// Register the inventory service client — use HTTP client when InventoryServiceUrl is configured,
+// otherwise fall back to the local database implementation.
+var inventoryServiceUrl = builder.Configuration["InventoryServiceUrl"];
+if (!string.IsNullOrEmpty(inventoryServiceUrl))
+{
+    builder.Services.AddHttpClient<IInventoryServiceClient, InventoryHttpClient>(client =>
+    {
+        client.BaseAddress = new Uri(inventoryServiceUrl);
+        client.Timeout = TimeSpan.FromSeconds(30);
+    });
+}
+else
+{
+    builder.Services.AddScoped<IInventoryServiceClient, InventoryService>();
+}
+
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<CustomerService>();
-builder.Services.AddScoped<InventoryService>();
 
 builder.Services.AddControllers().AddJsonOptions(options =>
     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
@@ -19,6 +34,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
+
+builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
@@ -33,5 +50,6 @@ app.UseSwaggerUI();
 app.UseCors();
 app.UseStaticFiles();
 app.MapControllers();
+app.MapHealthChecks("/health");
 app.MapFallbackToFile("index.html");
 app.Run();

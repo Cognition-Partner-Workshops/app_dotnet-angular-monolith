@@ -4,7 +4,11 @@ using OrderManager.Api.Models;
 
 namespace OrderManager.Api.Services;
 
-public class InventoryService
+/// <summary>
+/// Local implementation of IInventoryServiceClient that uses the shared database.
+/// This is kept as a fallback; in production the InventoryHttpClient is used instead.
+/// </summary>
+public class InventoryService : IInventoryServiceClient
 {
     private readonly AppDbContext _context;
 
@@ -39,5 +43,18 @@ public class InventoryService
             .Include(i => i.Product)
             .Where(i => i.QuantityOnHand <= i.ReorderLevel)
             .ToListAsync();
+    }
+
+    public async Task<InventoryItem> DeductStockAsync(int productId, int quantity)
+    {
+        var item = await _context.InventoryItems.FirstOrDefaultAsync(i => i.ProductId == productId)
+            ?? throw new ArgumentException($"No inventory record for product {productId}");
+
+        if (item.QuantityOnHand < quantity)
+            throw new InvalidOperationException($"Insufficient stock for product {productId}. Available: {item.QuantityOnHand}");
+
+        item.QuantityOnHand -= quantity;
+        await _context.SaveChangesAsync();
+        return item;
     }
 }
