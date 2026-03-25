@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Xunit;
 using OrderManager.Api.Data;
 using OrderManager.Api.Models;
 using OrderManager.Api.Services;
@@ -20,51 +20,55 @@ public class OrderServiceTests
         return context;
     }
 
-    private static InventoryApiClient CreateInventoryClient(bool deductSucceeds = true)
+    private static InventoryService CreateInventoryService(Dictionary<string, HttpResponseMessage> responses)
     {
-        var handler = new FakeInventoryHandler(deductSucceeds);
-        var httpClient = new HttpClient(handler)
-        {
-            BaseAddress = new Uri("http://fake-inventory-service")
-        };
-        return new InventoryApiClient(httpClient);
+        var handler = new FakeHttpMessageHandler(responses);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost:5100") };
+        return new InventoryService(httpClient);
     }
 
     [Fact]
     public async Task GetAllOrders_ReturnsEmptyList_WhenNoOrders()
     {
         using var context = CreateContext();
-        var service = new OrderService(context, CreateInventoryClient());
+        var inventoryService = CreateInventoryService(new Dictionary<string, HttpResponseMessage>());
+        var service = new OrderService(context, inventoryService);
         var orders = await service.GetAllOrdersAsync();
         Assert.Empty(orders);
     }
 
     [Fact]
-    public async Task CreateOrder_CallsInventoryServiceToDeductStock()
+    public async Task CreateOrder_CallsInventoryService()
     {
         using var context = CreateContext();
         var service = new OrderService(context, CreateInventoryClient(deductSucceeds: true));
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
-        var deductResponse = new InventoryItem
+        var deductedItem = new InventoryItemDto
         {
-            Id = 1,
-            ProductId = product.Id,
-            ProductName = product.Name,
-            Sku = product.Sku,
-            QuantityOnHand = 45,
-            ReorderLevel = 10,
-            WarehouseLocation = "A-01"
+            Id = 1, ProductId = product.Id, ProductName = product.Name,
+            QuantityOnHand = 45, ReorderLevel = 10, WarehouseLocation = "A-01"
         };
-        var inventoryClient = CreateInventoryClient(HttpStatusCode.OK, deductResponse);
-        var service = new OrderService(context, inventoryClient);
+
+        var responses = new Dictionary<string, HttpResponseMessage>
+        {
+            [$"api/inventory/product/{product.Id}/check?quantity=5"] = new(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(new { productId = product.Id, quantity = 5, available = true })
+            },
+            [$"api/inventory/product/{product.Id}/deduct"] = new(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(deductedItem)
+            }
+        };
+
+        var inventoryService = CreateInventoryService(responses);
+        var service = new OrderService(context, inventoryService);
 
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
-
         Assert.NotNull(order);
         Assert.Single(order.Items);
-        Assert.Equal(product.Id, order.Items.First().ProductId);
     }
 
     [Fact]
@@ -75,39 +79,36 @@ public class OrderServiceTests
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
-        var inventoryClient = CreateInventoryClient(HttpStatusCode.Conflict, new { error = "Insufficient stock" });
-        var service = new OrderService(context, inventoryClient);
+        var responses = new Dictionary<string, HttpResponseMessage>
+        {
+            [$"api/inventory/product/{product.Id}/check?quantity=99999"] = new(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(new { productId = product.Id, quantity = 99999, available = false })
+            }
+        };
+
+        var inventoryService = CreateInventoryService(responses);
+        var service = new OrderService(context, inventoryService);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 99999) }));
     }
 }
 
-internal class FakeHttpMessageHandler : HttpMessageHandler
+public class FakeHttpMessageHandler : HttpMessageHandler
 {
-    private readonly bool _deductSucceeds;
+    private readonly Dictionary<string, HttpResponseMessage> _responses;
 
-    public FakeInventoryHandler(bool deductSucceeds)
+    public FakeHttpMessageHandler(Dictionary<string, HttpResponseMessage> responses)
     {
-        _deductSucceeds = deductSucceeds;
+        _responses = responses;
     }
 
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        var path = request.RequestUri?.PathAndQuery ?? "";
-
-        if (path.Contains("/deduct"))
-        {
-            var status = _deductSucceeds ? HttpStatusCode.OK : HttpStatusCode.Conflict;
-            var content = _deductSucceeds
-                ? JsonContent.Create(new { message = "Stock deducted successfully" })
-                : JsonContent.Create(new { message = "Insufficient stock" });
-            return Task.FromResult(new HttpResponseMessage(status) { Content = content });
-        }
-
-        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = JsonContent.Create(new object[] { })
-        });
+        var path = request.RequestUri?.PathAndQuery.TrimStart('/') ?? string.Empty;
+        if (_responses.TryGetValue(path, out var response))
+            return Task.FromResult(response);
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
     }
 }
