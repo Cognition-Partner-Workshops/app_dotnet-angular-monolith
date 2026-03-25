@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using OrderManager.Api.Clients;
 using OrderManager.Api.Data;
 using OrderManager.Api.Models;
 
@@ -7,9 +8,9 @@ namespace OrderManager.Api.Services;
 public class OrderService
 {
     private readonly AppDbContext _context;
-    private readonly IInventoryServiceClient _inventoryClient;
+    private readonly IInventoryClient _inventoryClient;
 
-    public OrderService(AppDbContext context, IInventoryServiceClient inventoryClient)
+    public OrderService(AppDbContext context, IInventoryClient inventoryClient)
     {
         _context = context;
         _inventoryClient = inventoryClient;

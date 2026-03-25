@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using OrderManager.Api.Clients;
 using OrderManager.Api.Data;
 using OrderManager.Api.Models;
 using OrderManager.Api.Services;
@@ -13,7 +14,7 @@ public class MockInventoryServiceClient : IInventoryServiceClient
 {
     private readonly Dictionary<int, int> _stock = new();
 
-    public MockInventoryServiceClient(int defaultStock = 50)
+    public FakeInventoryClient(Dictionary<int, int>? initialStock = null)
     {
         for (int i = 1; i <= 5; i++)
             _stock[i] = defaultStock;
@@ -36,7 +37,7 @@ public class MockInventoryServiceClient : IInventoryServiceClient
         if (!_stock.ContainsKey(productId) || _stock[productId] < quantity)
             throw new InvalidOperationException($"Insufficient stock for product {productId}");
         _stock[productId] -= quantity;
-        return Task.FromResult(new InventoryDto { ProductId = productId, QuantityOnHand = _stock[productId] });
+        return Task.FromResult(new InventoryItemDto { ProductId = productId, QuantityOnHand = _stock[productId] });
     }
 
     public Task<List<InventoryDto>> GetLowStockItemsAsync()
@@ -91,5 +92,18 @@ public class OrderServiceTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 99999) }));
+    }
+
+    [Fact]
+    public async Task CreateOrder_ThrowsWhenProductNotInInventory()
+    {
+        using var context = CreateContext();
+        var inventoryClient = new FakeInventoryClient(new Dictionary<int, int>());
+        var service = new OrderService(context, inventoryClient);
+        var product = await context.Products.FirstAsync();
+        var customer = await context.Customers.FirstAsync();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 1) }));
     }
 }
