@@ -57,6 +57,7 @@ public class OrderServiceTests
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
         Assert.NotNull(order);
         Assert.Single(order.Items);
+        Assert.Equal(product.Id, order.Items.First().ProductId);
     }
 
     [Fact]
