@@ -7,10 +7,12 @@ namespace OrderManager.Api.Services;
 public class OrderService
 {
     private readonly AppDbContext _context;
+    private readonly IInventoryService _inventoryService;
 
-    public OrderService(AppDbContext context)
+    public OrderService(AppDbContext context, IInventoryService inventoryService)
     {
         _context = context;
+        _inventoryService = inventoryService;
     }
 
     public async Task<List<Order>> GetAllOrdersAsync()
@@ -46,13 +48,8 @@ public class OrderService
             var product = await _context.Products.FindAsync(productId)
                 ?? throw new ArgumentException($"Product {productId} not found");
 
-            var inventory = await _context.InventoryItems.FirstOrDefaultAsync(i => i.ProductId == productId)
+            var deducted = await _inventoryService.DeductStockAsync(productId, quantity)
                 ?? throw new InvalidOperationException($"No inventory record for product {productId}");
-
-            if (inventory.QuantityOnHand < quantity)
-                throw new InvalidOperationException($"Insufficient stock for {product.Name}. Available: {inventory.QuantityOnHand}");
-
-            inventory.QuantityOnHand -= quantity;
 
             order.Items.Add(new OrderItem
             {

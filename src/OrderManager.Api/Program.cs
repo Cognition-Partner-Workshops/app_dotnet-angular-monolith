@@ -10,7 +10,17 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<CustomerService>();
-builder.Services.AddScoped<InventoryService>();
+
+var inventoryServiceUrl = builder.Configuration.GetValue<string>("InventoryService:BaseUrl");
+if (!string.IsNullOrEmpty(inventoryServiceUrl))
+{
+    builder.Services.AddHttpClient<IInventoryService, InventoryHttpClient>(client =>
+        client.BaseAddress = new Uri(inventoryServiceUrl));
+}
+else
+{
+    builder.Services.AddScoped<IInventoryService, InventoryService>();
+}
 
 builder.Services.AddControllers().AddJsonOptions(options =>
     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
