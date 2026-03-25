@@ -7,35 +7,42 @@ namespace OrderManager.Api.Controllers;
 [Route("api/[controller]")]
 public class InventoryController : ControllerBase
 {
-    private readonly InventoryApiClient _inventoryClient;
+    private readonly IInventoryServiceClient _inventoryClient;
 
-    public InventoryController(InventoryApiClient inventoryClient)
+    public InventoryController(IInventoryServiceClient inventoryClient)
     {
-        _inventoryService = inventoryService;
+        _inventoryClient = inventoryClient;
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll() => Ok(await _inventoryService.GetAllInventoryAsync());
+    public async Task<IActionResult> GetAll() => Ok(await _inventoryClient.GetAllInventoryAsync());
 
     [HttpGet("product/{productId}")]
     public async Task<IActionResult> GetByProduct(int productId)
     {
-        var item = await _inventoryService.GetInventoryByProductIdAsync(productId);
+        var item = await _inventoryClient.GetInventoryByProductIdAsync(productId);
         return item is null ? NotFound() : Ok(item);
     }
 
     [HttpPost("product/{productId}/restock")]
     public async Task<IActionResult> Restock(int productId, [FromBody] RestockRequest request)
     {
-        var item = await _inventoryService.RestockAsync(productId, request.Quantity);
+        var item = await _inventoryClient.RestockAsync(productId, request.Quantity);
         return Ok(item);
     }
 
     [HttpPost("product/{productId}/deduct")]
     public async Task<IActionResult> Deduct(int productId, [FromBody] DeductRequest request)
     {
-        var success = await _inventoryClient.CheckAndDeductStockAsync(productId, request.Quantity);
-        return success ? Ok() : Conflict(new { error = "Insufficient stock" });
+        try
+        {
+            var item = await _inventoryClient.DeductStockAsync(productId, request.Quantity);
+            return Ok(item);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { error = ex.Message });
+        }
     }
 
     [HttpGet("low-stock")]
