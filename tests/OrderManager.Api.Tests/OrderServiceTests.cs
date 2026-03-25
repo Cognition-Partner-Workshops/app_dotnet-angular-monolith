@@ -1,11 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Xunit;
 using OrderManager.Api.Data;
 using OrderManager.Api.Models;
 using OrderManager.Api.Services;
-using Xunit;
 
 namespace OrderManager.Api.Tests;
 
@@ -21,29 +20,30 @@ public class OrderServiceTests
         return context;
     }
 
-    private static InventoryHttpClient CreateMockInventoryClient(HttpStatusCode statusCode = HttpStatusCode.OK, InventoryItem? responseItem = null)
+    private static InventoryApiClient CreateInventoryClient(bool deductSucceeds = true)
     {
-        var item = responseItem ?? new InventoryItem { Id = 1, ProductId = 1, ProductName = "Widget A", QuantityOnHand = 45 };
-        var handler = new MockHttpMessageHandler(statusCode, JsonSerializer.Serialize(item));
-        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost:5100") };
-        return new InventoryHttpClient(httpClient);
+        var handler = new FakeInventoryHandler(deductSucceeds);
+        var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("http://fake-inventory-service")
+        };
+        return new InventoryApiClient(httpClient);
     }
 
     [Fact]
     public async Task GetAllOrders_ReturnsEmptyList_WhenNoOrders()
     {
         using var context = CreateContext();
-        var inventoryClient = CreateMockInventoryClient();
-        var service = new OrderService(context, inventoryClient);
+        var service = new OrderService(context, CreateInventoryClient());
         var orders = await service.GetAllOrdersAsync();
         Assert.Empty(orders);
     }
 
     [Fact]
-    public async Task CreateOrder_CallsInventoryService()
+    public async Task CreateOrder_CallsInventoryServiceToDeductStock()
     {
         using var context = CreateContext();
-        var inventoryClient = CreateMockInventoryClient();
+        var inventoryClient = CreateInventoryClient(deductSucceeds: true);
         var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
@@ -56,10 +56,10 @@ public class OrderServiceTests
     }
 
     [Fact]
-    public async Task CreateOrder_ThrowsWhenInventoryServiceRejectsDeduction()
+    public async Task CreateOrder_ThrowsWhenInventoryServiceReturnsConflict()
     {
         using var context = CreateContext();
-        var inventoryClient = CreateMockInventoryClient(HttpStatusCode.Conflict);
+        var inventoryClient = CreateInventoryClient(deductSucceeds: false);
         var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
@@ -69,22 +69,31 @@ public class OrderServiceTests
     }
 }
 
-internal class MockHttpMessageHandler : HttpMessageHandler
+internal class FakeInventoryHandler : HttpMessageHandler
 {
-    private readonly HttpStatusCode _statusCode;
-    private readonly string _responseContent;
+    private readonly bool _deductSucceeds;
 
-    public MockHttpMessageHandler(HttpStatusCode statusCode, string responseContent)
+    public FakeInventoryHandler(bool deductSucceeds)
     {
-        _statusCode = statusCode;
-        _responseContent = responseContent;
+        _deductSucceeds = deductSucceeds;
     }
 
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        return Task.FromResult(new HttpResponseMessage(_statusCode)
+        var path = request.RequestUri?.PathAndQuery ?? "";
+
+        if (path.Contains("/deduct"))
         {
-            Content = new StringContent(_responseContent, System.Text.Encoding.UTF8, "application/json")
+            var status = _deductSucceeds ? HttpStatusCode.OK : HttpStatusCode.BadRequest;
+            var content = _deductSucceeds
+                ? JsonContent.Create(new { id = 1, productId = 1, quantityOnHand = 45 })
+                : JsonContent.Create(new { error = "Insufficient stock" });
+            return Task.FromResult(new HttpResponseMessage(status) { Content = content });
+        }
+
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = JsonContent.Create(new object[] { })
         });
     }
 }

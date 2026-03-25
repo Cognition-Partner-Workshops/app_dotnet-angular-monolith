@@ -3,11 +3,11 @@ using OrderManager.Api.Models;
 
 namespace OrderManager.Api.Services;
 
-public class InventoryHttpClient
+public class InventoryApiClient
 {
     private readonly HttpClient _httpClient;
 
-    public InventoryHttpClient(HttpClient httpClient)
+    public InventoryApiClient(HttpClient httpClient)
     {
         _httpClient = httpClient;
     }
@@ -33,21 +33,15 @@ public class InventoryHttpClient
             ?? throw new InvalidOperationException("Failed to deserialize restock response");
     }
 
-    public async Task<InventoryItem> DeductStockAsync(int productId, int quantity)
-    {
-        var response = await _httpClient.PostAsJsonAsync($"api/inventory/product/{productId}/deduct", new { Quantity = quantity });
-        if (!response.IsSuccessStatusCode)
-        {
-            var error = await response.Content.ReadAsStringAsync();
-            throw new InvalidOperationException($"Inventory deduction failed: {error}");
-        }
-        return await response.Content.ReadFromJsonAsync<InventoryItem>()
-            ?? throw new InvalidOperationException("Failed to deserialize deduct response");
-    }
-
     public async Task<List<InventoryItem>> GetLowStockItemsAsync()
     {
         var items = await _httpClient.GetFromJsonAsync<List<InventoryItem>>("api/inventory/low-stock");
         return items ?? new List<InventoryItem>();
+    }
+
+    public async Task<bool> CheckAndDeductStockAsync(int productId, int quantity)
+    {
+        var response = await _httpClient.PostAsJsonAsync($"api/inventory/product/{productId}/deduct", new { Quantity = quantity });
+        return response.IsSuccessStatusCode;
     }
 }
