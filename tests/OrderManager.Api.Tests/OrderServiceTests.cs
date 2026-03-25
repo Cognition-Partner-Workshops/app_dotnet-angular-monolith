@@ -47,7 +47,7 @@ public class FakeInventoryServiceClient : IInventoryServiceClient
 
     public Task<InventoryItem> DeductStockAsync(int productId, int quantity)
     {
-        if (_shouldFail)
+        if (_shouldThrowOnDeduct)
             throw new InvalidOperationException($"Insufficient stock for product {productId}");
 
         if (!_stock.ContainsKey(productId))
