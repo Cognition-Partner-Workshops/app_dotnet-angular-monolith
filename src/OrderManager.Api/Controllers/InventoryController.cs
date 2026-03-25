@@ -32,7 +32,7 @@ public class InventoryController : ControllerBase
     }
 
     [HttpGet("low-stock")]
-    public async Task<IActionResult> GetLowStock() => Ok(await _inventoryClient.GetLowStockItemsAsync());
+    public async Task<IActionResult> GetLowStock() => Ok(await _inventoryService.GetLowStockItemsAsync());
 }
 
 public record RestockRequest(int Quantity);
