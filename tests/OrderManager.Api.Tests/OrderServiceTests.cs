@@ -1,54 +1,55 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Abstractions;
-using Xunit;
 using OrderManager.Api.Data;
+using OrderManager.Api.Models;
 using OrderManager.Api.Services;
+using Xunit;
 
 namespace OrderManager.Api.Tests;
 
 /// <summary>
-/// In-memory fake that overrides virtual methods to avoid real HTTP calls.
+/// In-memory fake implementing IInventoryServiceClient to avoid real HTTP calls.
 /// </summary>
-public class FakeInventoryServiceClient : InventoryServiceClient
+public class FakeInventoryServiceClient : IInventoryServiceClient
 {
     private readonly Dictionary<int, int> _stock;
     private readonly bool _shouldFail;
 
-    public FakeInventoryServiceClient(bool shouldFail = false)
-        : base(new HttpClient(), NullLogger<InventoryServiceClient>.Instance)
+    public FakeInventoryServiceClient(
+        Dictionary<int, int>? initialStock = null,
+        bool shouldFail = false)
     {
-        _shouldFail = shouldFail;
-        _stock = new Dictionary<int, int>
+        _stock = initialStock ?? new Dictionary<int, int>
         {
             { 1, 50 }, { 2, 100 }, { 3, 150 }, { 4, 200 }, { 5, 250 }
         };
+        _shouldFail = shouldFail;
     }
 
-    public override Task<List<InventoryItemDto>> GetAllInventoryAsync() =>
-        Task.FromResult(_stock.Select(kv => new InventoryItemDto { ProductId = kv.Key, QuantityOnHand = kv.Value }).ToList());
+    public Task<List<InventoryItem>> GetAllInventoryAsync() =>
+        Task.FromResult(_stock.Select(kv => new InventoryItem { ProductId = kv.Key, QuantityOnHand = kv.Value }).ToList());
 
-    public override Task<InventoryItemDto?> GetInventoryByProductIdAsync(int productId) =>
+    public Task<InventoryItem?> GetInventoryByProductIdAsync(int productId) =>
         Task.FromResult(_stock.ContainsKey(productId)
-            ? new InventoryItemDto { ProductId = productId, QuantityOnHand = _stock[productId] }
+            ? new InventoryItem { ProductId = productId, QuantityOnHand = _stock[productId] }
             : null);
 
-    public override Task<InventoryItemDto> RestockAsync(int productId, int quantity)
+    public Task<InventoryItem> RestockAsync(int productId, int quantity)
     {
         _stock[productId] = _stock.GetValueOrDefault(productId) + quantity;
-        return Task.FromResult(new InventoryItemDto { ProductId = productId, QuantityOnHand = _stock[productId] });
+        return Task.FromResult(new InventoryItem { ProductId = productId, QuantityOnHand = _stock[productId] });
     }
 
-    public override Task<InventoryItemDto?> DeductStockAsync(int productId, int quantity)
+    public Task<InventoryItem> DeductStockAsync(int productId, int quantity)
     {
         if (_shouldFail || !_stock.ContainsKey(productId) || _stock[productId] < quantity)
             throw new InvalidOperationException($"Insufficient stock for product {productId}");
         _stock[productId] -= quantity;
-        return Task.FromResult<InventoryItemDto?>(new InventoryItemDto { ProductId = productId, QuantityOnHand = _stock[productId] });
+        return Task.FromResult(new InventoryItem { ProductId = productId, QuantityOnHand = _stock[productId] });
     }
 
-    public override Task<List<InventoryItemDto>> GetLowStockItemsAsync() =>
+    public Task<List<InventoryItem>> GetLowStockItemsAsync() =>
         Task.FromResult(_stock.Where(kv => kv.Value <= 10)
-            .Select(kv => new InventoryItemDto { ProductId = kv.Key, QuantityOnHand = kv.Value }).ToList());
+            .Select(kv => new InventoryItem { ProductId = kv.Key, QuantityOnHand = kv.Value }).ToList());
 }
 
 public class OrderServiceTests
