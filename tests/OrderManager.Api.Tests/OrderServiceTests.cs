@@ -1,93 +1,11 @@
 using System.Net;
-using System.Text.Json;
+using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using OrderManager.Api.Data;
 using OrderManager.Api.Services;
 using Xunit;
 
 namespace OrderManager.Api.Tests;
-
-/// <summary>
-/// Fake HTTP handler that simulates inventory-service responses for testing.
-/// </summary>
-public class FakeInventoryHttpHandler : HttpMessageHandler
-{
-    private readonly Dictionary<int, int> _stock = new()
-    {
-        { 1, 50 }, { 2, 100 }, { 3, 150 }, { 4, 200 }, { 5, 250 }
-    };
-
-    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-    {
-        var path = request.RequestUri?.PathAndQuery ?? "";
-
-        if (path.Contains("/deduct"))
-        {
-            var segments = path.Split('/');
-            var productIdStr = segments[^2];
-            if (int.TryParse(productIdStr, out var pid) && _stock.TryGetValue(pid, out var currentQty))
-            {
-                var body = await request.Content!.ReadAsStringAsync(cancellationToken);
-                var doc = JsonDocument.Parse(body);
-                // Handle both PascalCase and camelCase property names
-                int qty;
-                if (doc.RootElement.TryGetProperty("Quantity", out var qPascal))
-                    qty = qPascal.GetInt32();
-                else if (doc.RootElement.TryGetProperty("quantity", out var qCamel))
-                    qty = qCamel.GetInt32();
-                else
-                    throw new InvalidOperationException("No quantity property found in request body");
-
-                if (currentQty < qty)
-                {
-                    return new HttpResponseMessage(HttpStatusCode.Conflict)
-                    {
-                        Content = new StringContent($"{{\"error\":\"Insufficient stock\"}}", System.Text.Encoding.UTF8, "application/json")
-                    };
-                }
-                _stock[pid] = currentQty - qty;
-                var item = new InventoryItemDto { Id = pid, ProductId = pid, QuantityOnHand = _stock[pid] };
-                return new HttpResponseMessage(HttpStatusCode.OK)
-                {
-                    Content = new StringContent(JsonSerializer.Serialize(item), System.Text.Encoding.UTF8, "application/json")
-                };
-            }
-            return new HttpResponseMessage(HttpStatusCode.NotFound);
-        }
-
-        return new HttpResponseMessage(HttpStatusCode.OK)
-        {
-            Content = new StringContent("[]", System.Text.Encoding.UTF8, "application/json")
-        };
-    }
-
-    public Task<List<InventoryItemDto>> GetAllInventoryAsync() =>
-        Task.FromResult(_stock.Select(kv => new InventoryItemDto { ProductId = kv.Key, QuantityOnHand = kv.Value }).ToList());
-
-    public Task<InventoryItemDto?> GetInventoryByProductIdAsync(int productId) =>
-        Task.FromResult(_stock.ContainsKey(productId)
-            ? new InventoryItemDto { ProductId = productId, QuantityOnHand = _stock[productId] }
-            : null);
-
-    public Task<InventoryItemDto> RestockAsync(int productId, int quantity)
-    {
-        _stock[productId] = _stock.GetValueOrDefault(productId) + quantity;
-        return Task.FromResult(new InventoryItemDto { ProductId = productId, QuantityOnHand = _stock[productId] });
-    }
-
-    public Task<InventoryItemDto> DeductStockAsync(int productId, int quantity)
-    {
-        if (!_stock.ContainsKey(productId))
-            throw new InvalidOperationException($"No inventory record for product {productId}");
-        if (_stock[productId] < quantity)
-            throw new InvalidOperationException($"Insufficient stock for product {productId}");
-        _stock[productId] -= quantity;
-        return Task.FromResult(new InventoryItemDto { ProductId = productId, QuantityOnHand = _stock[productId] });
-    }
-
-    public Task<List<InventoryItemDto>> GetLowStockItemsAsync() =>
-        Task.FromResult(_stock.Where(kv => kv.Value <= 10).Select(kv => new InventoryItemDto { ProductId = kv.Key, QuantityOnHand = kv.Value }).ToList());
-}
 
 public class OrderServiceTests
 {

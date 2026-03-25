@@ -4,22 +4,10 @@ using OrderManager.Api.Models;
 namespace OrderManager.Api.Services;
 
 /// <summary>
-/// Interface for inventory service operations (enables unit testing with fakes).
-/// </summary>
-public interface IInventoryServiceClient
-{
-    Task<List<InventoryItemDto>> GetAllInventoryAsync();
-    Task<InventoryItemDto?> GetInventoryByProductIdAsync(int productId);
-    Task<InventoryItemDto> RestockAsync(int productId, int quantity);
-    Task<InventoryItemDto> DeductStockAsync(int productId, int quantity);
-    Task<List<InventoryItemDto>> GetLowStockItemsAsync();
-}
-
-/// <summary>
 /// HTTP client for communicating with the standalone inventory microservice.
 /// Replaces direct database access for inventory operations.
 /// </summary>
-public class InventoryServiceClient : IInventoryServiceClient
+public class InventoryServiceClient
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<InventoryServiceClient> _logger;
@@ -108,7 +96,6 @@ public class InventoryServiceClient : IInventoryServiceClient
             throw;
         }
     }
-
 }
 
 /// <summary>
