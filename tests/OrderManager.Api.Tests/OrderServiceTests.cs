@@ -70,6 +70,8 @@ public class OrderServiceTests
     public async Task CreateOrder_SucceedsWhenStockAvailable()
     {
         using var context = CreateContext();
+        var inventoryClient = new FakeInventoryServiceClient();
+        var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
@@ -84,6 +86,8 @@ public class OrderServiceTests
     public async Task CreateOrder_ThrowsWhenInsufficientStock()
     {
         using var context = CreateContext();
+        var inventoryClient = new FakeInventoryServiceClient();
+        var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
