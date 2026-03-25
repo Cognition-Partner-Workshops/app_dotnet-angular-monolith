@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 using OrderManager.Api.Data;
@@ -42,6 +41,7 @@ public class OrderServiceTests
     public async Task CreateOrder_CallsInventoryService()
     {
         using var context = CreateContext();
+        var service = new OrderService(context, CreateInventoryClient(deductSucceeds: true));
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
@@ -75,6 +75,7 @@ public class OrderServiceTests
     public async Task CreateOrder_ThrowsWhenInventoryServiceReturnsConflict()
     {
         using var context = CreateContext();
+        var service = new OrderService(context, CreateInventoryClient(deductSucceeds: false));
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
