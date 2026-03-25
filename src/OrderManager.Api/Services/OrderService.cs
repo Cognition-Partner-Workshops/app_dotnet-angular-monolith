@@ -43,19 +43,15 @@ public class OrderService
             ShippingAddress = $"{customer.Address}, {customer.City}, {customer.State} {customer.ZipCode}"
         };
 
-        // Check stock availability and deduct via the inventory microservice
         foreach (var (productId, quantity) in items)
         {
             var product = await _context.Products.FindAsync(productId)
                 ?? throw new ArgumentException($"Product {productId} not found");
 
-            var stockLevel = await _inventoryClient.GetStockLevelAsync(productId);
-            if (stockLevel < quantity)
-                throw new InvalidOperationException($"Insufficient stock for {product.Name}. Available: {stockLevel}");
-
-            var deducted = await _inventoryClient.DeductStockAsync(productId, quantity);
-            if (!deducted)
-                throw new InvalidOperationException($"Failed to deduct stock for {product.Name}");
+            // Deduct stock via the inventory microservice instead of direct DB access
+            var inventoryItem = await _inventoryClient.DeductStockAsync(productId, quantity);
+            if (inventoryItem is null)
+                throw new InvalidOperationException($"No inventory record for product {productId}");
 
             order.Items.Add(new OrderItem
             {
