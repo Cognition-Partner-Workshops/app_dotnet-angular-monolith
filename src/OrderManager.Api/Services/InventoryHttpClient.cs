@@ -42,6 +42,14 @@ public class InventoryHttpClient
         return await response.Content.ReadFromJsonAsync<List<InventoryItemDto>>() ?? new List<InventoryItemDto>();
     }
 
+    public async Task<bool> CheckStockAsync(int productId, int quantity)
+    {
+        var response = await _httpClient.GetAsync($"/api/inventory/product/{productId}/check?quantity={quantity}");
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<StockCheckResponse>();
+        return result?.Available ?? false;
+    }
+
     public async Task<InventoryItemDto?> DeductStockAsync(int productId, int quantity)
     {
         var response = await _httpClient.PostAsJsonAsync($"/api/inventory/product/{productId}/deduct", new { quantity });
@@ -66,6 +74,13 @@ public class InventoryItemDto
     public int ReorderLevel { get; set; }
     public string WarehouseLocation { get; set; } = string.Empty;
     public DateTime LastRestocked { get; set; }
+}
+
+public class StockCheckResponse
+{
+    public int ProductId { get; set; }
+    public int Quantity { get; set; }
+    public bool Available { get; set; }
 }
 
 public class ErrorResponse
