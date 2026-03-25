@@ -97,7 +97,6 @@ public class OrderServiceTests
         var inventoryClient = new FakeInventoryServiceClient();
         var service = new OrderService(context, inventoryClient);
 
-        var service = new OrderService(context, mockClient.Object);
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
         Assert.NotNull(order);
