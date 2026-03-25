@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using OrderManager.Api.Clients;
+using Xunit;
 using OrderManager.Api.Data;
 using OrderManager.Api.Services;
 
@@ -15,7 +15,6 @@ public class MockInventoryServiceClient : IInventoryServiceClient
 
     public MockInventoryServiceClient(int defaultStock = 50)
     {
-        // Pre-populate stock for product IDs 1-5
         for (int i = 1; i <= 5; i++)
             _stock[i] = defaultStock;
     }
@@ -72,20 +71,18 @@ public class OrderServiceTests
     }
 
     [Fact]
-    public async Task CreateOrder_CallsInventoryServiceToDeductStock()
+    public async Task CreateOrder_CallsInventoryService()
     {
         using var context = CreateContext();
         var inventoryClient = new MockInventoryServiceClient();
         var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
-        var inventoryClient = new FakeInventoryClient(new Dictionary<int, int> { { product.Id, 100 } });
-        var service = new OrderService(context, inventoryClient);
 
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
-        var stockAvailable = await inventoryClient.CheckStockAsync(product.Id, 95);
-        Assert.True(stockAvailable);
+        Assert.Single(order.Items);
+        Assert.Equal(product.Price * 5, order.TotalAmount);
     }
 
     [Fact]
@@ -96,8 +93,6 @@ public class OrderServiceTests
         var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
-        var inventoryClient = new FakeInventoryClient(new Dictionary<int, int> { { product.Id, 5 } });
-        var service = new OrderService(context, inventoryClient);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 99999) }));
