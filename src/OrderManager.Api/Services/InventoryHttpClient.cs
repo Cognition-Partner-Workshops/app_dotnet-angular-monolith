@@ -48,7 +48,7 @@ public class InventoryHttpClient
 
     public async Task<bool> ReserveStockAsync(int productId, int quantity)
     {
-        var response = await _httpClient.PostAsJsonAsync("api/inventory/reserve", new { productId, quantity });
+        var response = await _httpClient.PostAsJsonAsync($"api/inventory/product/{productId}/deduct", new { quantity });
         return response.IsSuccessStatusCode;
     }
 }
