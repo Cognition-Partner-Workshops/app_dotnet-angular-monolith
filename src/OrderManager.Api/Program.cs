@@ -8,24 +8,16 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=ordermanager.db"));
 
-var inventoryServiceUrl = builder.Configuration["Services:InventoryService:BaseUrl"] ?? "http://localhost:5100";
-builder.Services.AddHttpClient<InventoryService>(client =>
+var inventoryServiceUrl = builder.Configuration["ServiceUrls:InventoryService"] ?? "http://localhost:5100";
+builder.Services.AddHttpClient<InventoryHttpClient>(client =>
 {
     client.BaseAddress = new Uri(inventoryServiceUrl);
-    client.DefaultRequestHeaders.Add("Accept", "application/json");
+    client.Timeout = TimeSpan.FromSeconds(30);
 });
 
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<CustomerService>();
-
-// Inventory is now a standalone microservice — use HTTP client instead of in-process service
-builder.Services.AddHttpClient<InventoryServiceHttpClient>(client =>
-{
-    var baseUrl = builder.Configuration["InventoryServiceUrl"] ?? "http://localhost:5002";
-    client.BaseAddress = new Uri(baseUrl);
-    client.Timeout = TimeSpan.FromSeconds(30);
-});
 
 builder.Services.AddControllers().AddJsonOptions(options =>
     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
