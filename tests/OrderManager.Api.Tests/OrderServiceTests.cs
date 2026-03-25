@@ -1,12 +1,12 @@
 using System.Net;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
 using Xunit;
 using OrderManager.Api.Data;
 using OrderManager.Api.Services;
-using Xunit;
 
 namespace OrderManager.Api.Tests;
 
@@ -22,7 +22,10 @@ public class OrderServiceTests
         return context;
     }
 
-    private static InventoryApiClient CreateInventoryApiClient(HttpStatusCode statusCode = HttpStatusCode.OK, string? jsonContent = null)
+    private static InventoryServiceClient CreateInventoryServiceClient(
+        HttpStatusCode reservationStatus = HttpStatusCode.OK,
+        bool reservationSuccess = true,
+        HttpStatusCode deductStatus = HttpStatusCode.OK)
     {
         var mockHandler = new Mock<HttpMessageHandler>(MockBehavior.Loose);
         mockHandler.Protected()
@@ -30,23 +33,46 @@ public class OrderServiceTests
                 "SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
                 ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(() =>
+            .ReturnsAsync((HttpRequestMessage request, CancellationToken _) =>
             {
-                var response = new HttpResponseMessage(statusCode);
-                if (jsonContent != null)
-                    response.Content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
-                return response;
+                var url = request.RequestUri?.PathAndQuery ?? "";
+
+                if (url.Contains("check-and-reserve"))
+                {
+                    var response = new HttpResponseMessage(reservationStatus);
+                    var json = JsonSerializer.Serialize(new { Success = reservationSuccess, Message = reservationSuccess ? "OK" : "Insufficient stock", Details = new object[0] });
+                    response.Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+                    return response;
+                }
+
+                if (url.Contains("/deduct"))
+                {
+                    var response = new HttpResponseMessage(deductStatus);
+                    if (deductStatus == HttpStatusCode.OK)
+                    {
+                        var json = JsonSerializer.Serialize(new { Id = 1, ProductId = 1, ProductName = "Test", Sku = "", QuantityOnHand = 10, ReorderLevel = 5, WarehouseLocation = "A-01", LastRestocked = DateTime.UtcNow });
+                        response.Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+                    }
+                    return response;
+                }
+
+                // Default: return OK with empty JSON
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("[]", System.Text.Encoding.UTF8, "application/json")
+                };
             });
 
-        var httpClient = new HttpClient(mockHandler.Object) { BaseAddress = new Uri("http://localhost:5100") };
-        return new InventoryApiClient(httpClient);
+        var httpClient = new HttpClient(mockHandler.Object) { BaseAddress = new Uri("http://localhost:5002") };
+        var logger = new Mock<ILogger<InventoryServiceClient>>();
+        return new InventoryServiceClient(httpClient, logger.Object);
     }
 
     [Fact]
     public async Task GetAllOrders_ReturnsEmptyList_WhenNoOrders()
     {
         using var context = CreateContext();
-        var inventoryClient = CreateInventoryApiClient();
+        var inventoryClient = CreateInventoryServiceClient();
         var service = new OrderService(context, inventoryClient);
         var orders = await service.GetAllOrdersAsync();
         Assert.Empty(orders);
@@ -59,7 +85,7 @@ public class OrderServiceTests
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
-        var inventoryClient = CreateInventoryApiClient(HttpStatusCode.OK);
+        var inventoryClient = CreateInventoryServiceClient(reservationSuccess: true);
         var service = new OrderService(context, inventoryClient);
 
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
@@ -76,7 +102,7 @@ public class OrderServiceTests
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
-        var inventoryClient = CreateInventoryApiClient(HttpStatusCode.Conflict);
+        var inventoryClient = CreateInventoryServiceClient(reservationSuccess: false);
         var service = new OrderService(context, inventoryClient);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
@@ -84,17 +110,17 @@ public class OrderServiceTests
     }
 
     [Fact]
-    public async Task CreateOrder_ThrowsWhenDeductFails()
+    public async Task CreateOrder_ThrowsWhenReservationFails()
     {
         using var context = CreateContext();
-        var inventoryClient = CreateMockInventoryApiClient(checkStockResult: true, deductStockReturnsNull: true);
-        var service = new OrderService(context, inventoryClient, CreateLogger());
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
-        // DeductStockAsync returns null (Conflict) but our OrderService doesn't check the result,
-        // so the order should still be created successfully
-        var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
-        Assert.NotNull(order);
+        // Reservation returns success=false
+        var inventoryClient = CreateInventoryServiceClient(reservationSuccess: false);
+        var service = new OrderService(context, inventoryClient);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) }));
     }
 }
