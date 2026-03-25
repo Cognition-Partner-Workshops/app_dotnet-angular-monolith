@@ -11,7 +11,6 @@ var inventoryServiceUrl = builder.Configuration["ServiceUrls:InventoryService"] 
 builder.Services.AddHttpClient<InventoryHttpClient>(client =>
 {
     client.BaseAddress = new Uri(inventoryServiceUrl);
-    client.Timeout = TimeSpan.FromSeconds(30);
 });
 
 builder.Services.AddScoped<OrderService>();
