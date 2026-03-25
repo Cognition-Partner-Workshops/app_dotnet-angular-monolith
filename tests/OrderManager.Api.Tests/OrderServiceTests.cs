@@ -6,13 +6,18 @@ using Xunit;
 
 namespace OrderManager.Api.Tests;
 
-public class FakeInventoryClient : IInventoryServiceClient
+public class FakeInventoryServiceClient : IInventoryServiceClient
 {
+    private readonly Dictionary<int, int> _stock;
     private readonly bool _shouldFail;
 
-    public FakeInventoryClient(bool shouldFail = false)
+    public FakeInventoryServiceClient(bool shouldThrowOnDeduct = false)
     {
-        _shouldFail = shouldFail;
+        _stock = new Dictionary<int, int>
+        {
+            { 1, 50 }, { 2, 100 }, { 3, 150 }, { 4, 200 }, { 5, 250 }
+        };
+        _shouldFail = shouldThrowOnDeduct;
     }
 
     public Task<List<InventoryItem>> GetAllInventoryAsync() =>
@@ -39,7 +44,7 @@ public class FakeInventoryClient : IInventoryServiceClient
 
     public Task<InventoryItem> DeductStockAsync(int productId, int quantity)
     {
-        if (_shouldThrowOnDeduct)
+        if (_shouldFail)
             throw new InvalidOperationException($"Insufficient stock for product {productId}");
 
         if (!_stock.ContainsKey(productId))
