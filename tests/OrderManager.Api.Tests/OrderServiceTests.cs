@@ -41,7 +41,6 @@ public class OrderServiceTests
     public async Task CreateOrder_CallsInventoryService()
     {
         using var context = CreateContext();
-        var service = new OrderService(context, CreateInventoryClient(deductSucceeds: true));
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
@@ -72,10 +71,9 @@ public class OrderServiceTests
     }
 
     [Fact]
-    public async Task CreateOrder_ThrowsWhenInventoryServiceReturnsConflict()
+    public async Task CreateOrder_ThrowsOnInsufficientStock()
     {
         using var context = CreateContext();
-        var service = new OrderService(context, CreateInventoryClient(deductSucceeds: false));
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
