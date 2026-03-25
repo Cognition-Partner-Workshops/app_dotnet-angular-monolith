@@ -58,9 +58,6 @@ public class InventoryController : ControllerBase
             return NotFound(new { error = ex.Message });
         }
     }
-
-    [HttpGet("low-stock")]
-    public async Task<IActionResult> GetLowStock() => Ok(await _inventoryClient.GetLowStockItemsAsync());
 }
 
 public record RestockRequest(int Quantity);
