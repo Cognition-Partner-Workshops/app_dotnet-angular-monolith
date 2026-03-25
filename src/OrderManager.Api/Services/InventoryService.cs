@@ -7,7 +7,7 @@ namespace OrderManager.Api.Services;
 /// HTTP client proxy that delegates inventory operations to the inventory-service microservice.
 /// Replaces the previous in-process implementation that used AppDbContext directly.
 /// </summary>
-public class InventoryService
+public class InventoryService : IInventoryServiceClient
 {
     private readonly HttpClient _httpClient;
 
@@ -61,6 +61,12 @@ public class InventoryService
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<InventoryItemDto>()
             ?? throw new InvalidOperationException("Failed to deserialize deduct response");
+    }
+
+    public async Task<int> GetStockLevelAsync(int productId)
+    {
+        var inventory = await GetInventoryByProductIdAsync(productId);
+        return inventory?.QuantityOnHand ?? 0;
     }
 }
 

@@ -14,6 +14,7 @@ builder.Services.AddHttpClient<InventoryService>(client =>
     client.BaseAddress = new Uri(inventoryServiceUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
 });
+builder.Services.AddScoped<IInventoryServiceClient>(sp => sp.GetRequiredService<InventoryService>());
 
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<ProductService>();
