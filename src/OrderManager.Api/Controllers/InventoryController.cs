@@ -28,7 +28,7 @@ public class InventoryController : ControllerBase
     public async Task<IActionResult> Restock(int productId, [FromBody] RestockRequest request)
     {
         var item = await _inventoryClient.RestockAsync(productId, request.Quantity);
-        return Ok(item);
+        return item is null ? BadRequest("Restock failed") : Ok(item);
     }
 
     [HttpGet("low-stock")]
