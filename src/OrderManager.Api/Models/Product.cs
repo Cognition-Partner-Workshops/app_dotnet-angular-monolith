@@ -9,5 +9,6 @@ public class Product
     public decimal Price { get; set; }
     public string Sku { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    // Inventory relationship removed — now managed by inventory-service microservice
     public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 }
