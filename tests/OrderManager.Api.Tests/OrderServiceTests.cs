@@ -79,6 +79,13 @@ public class OrderServiceTests
         return context;
     }
 
+    private static InventoryApiClient CreateInventoryClient(bool stockAvailable = true)
+    {
+        var handler = new FakeInventoryHandler(stockAvailable);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://fake-inventory") };
+        return new InventoryApiClient(httpClient);
+    }
+
     [Fact]
     public async Task GetAllOrders_ReturnsEmptyList_WhenNoOrders()
     {
