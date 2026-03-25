@@ -18,12 +18,12 @@ public class InventoryServiceClient : IInventoryServiceClient
         _logger = logger;
     }
 
-    public async Task<List<InventoryItemDto>> GetAllInventoryAsync()
+    public async Task<List<InventoryItem>> GetAllInventoryAsync()
     {
         try
         {
-            var items = await _httpClient.GetFromJsonAsync<List<InventoryItemDto>>("api/inventory");
-            return items ?? new List<InventoryItemDto>();
+            var items = await _httpClient.GetFromJsonAsync<List<InventoryItem>>("api/inventory");
+            return items ?? new List<InventoryItem>();
         }
         catch (Exception ex)
         {
@@ -32,7 +32,7 @@ public class InventoryServiceClient : IInventoryServiceClient
         }
     }
 
-    public async Task<InventoryItemDto?> GetInventoryByProductIdAsync(int productId)
+    public async Task<InventoryItem?> GetInventoryByProductIdAsync(int productId)
     {
         try
         {
@@ -40,7 +40,7 @@ public class InventoryServiceClient : IInventoryServiceClient
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                 return null;
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<InventoryItemDto>();
+            return await response.Content.ReadFromJsonAsync<InventoryItem>();
         }
         catch (Exception ex)
         {
@@ -49,7 +49,7 @@ public class InventoryServiceClient : IInventoryServiceClient
         }
     }
 
-    public async Task<InventoryItemDto> RestockAsync(int productId, int quantity)
+    public async Task<InventoryItem> RestockAsync(int productId, int quantity)
     {
         try
         {
@@ -57,7 +57,7 @@ public class InventoryServiceClient : IInventoryServiceClient
                 $"api/inventory/product/{productId}/restock",
                 new { Quantity = quantity });
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<InventoryItemDto>()
+            return await response.Content.ReadFromJsonAsync<InventoryItem>()
                 ?? throw new InvalidOperationException("Restock returned null response");
         }
         catch (Exception ex)
@@ -67,12 +67,12 @@ public class InventoryServiceClient : IInventoryServiceClient
         }
     }
 
-    public async Task<List<InventoryItemDto>> GetLowStockItemsAsync()
+    public async Task<List<InventoryItem>> GetLowStockItemsAsync()
     {
         try
         {
-            var items = await _httpClient.GetFromJsonAsync<List<InventoryItemDto>>("api/inventory/low-stock");
-            return items ?? new List<InventoryItemDto>();
+            var items = await _httpClient.GetFromJsonAsync<List<InventoryItem>>("api/inventory/low-stock");
+            return items ?? new List<InventoryItem>();
         }
         catch (Exception ex)
         {
@@ -81,7 +81,7 @@ public class InventoryServiceClient : IInventoryServiceClient
         }
     }
 
-    public async Task<InventoryItemDto?> DeductStockAsync(int productId, int quantity)
+    public async Task<InventoryItem> DeductStockAsync(int productId, int quantity)
     {
         try
         {
@@ -92,12 +92,9 @@ public class InventoryServiceClient : IInventoryServiceClient
             {
                 throw new InvalidOperationException($"Insufficient stock for product {productId}");
             }
-            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
-            {
-                return null;
-            }
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<InventoryItemDto>();
+            return await response.Content.ReadFromJsonAsync<InventoryItem>()
+                ?? throw new InvalidOperationException($"Deduct returned null for product {productId}");
         }
         catch (InvalidOperationException)
         {
@@ -127,21 +124,6 @@ public class InventoryServiceClient : IInventoryServiceClient
     }
 }
 
-/// <summary>
-/// DTO for inventory items returned from the inventory microservice.
-/// Decoupled from EF Core entity to avoid direct database dependency.
-/// </summary>
-public class InventoryItemDto
-{
-    public int Id { get; set; }
-    public int ProductId { get; set; }
-    public string ProductName { get; set; } = string.Empty;
-    public string Sku { get; set; } = string.Empty;
-    public int QuantityOnHand { get; set; }
-    public int ReorderLevel { get; set; }
-    public string WarehouseLocation { get; set; } = string.Empty;
-    public DateTime LastRestocked { get; set; }
-}
 
 public class StockReservationRequest
 {
