@@ -7,9 +7,9 @@ namespace OrderManager.Api.Services;
 public class OrderService
 {
     private readonly AppDbContext _context;
-    private readonly InventoryServiceClient _inventoryClient;
+    private readonly InventoryService _inventoryService;
 
-    public OrderService(AppDbContext context, InventoryServiceClient inventoryClient)
+    public OrderService(AppDbContext context, InventoryService inventoryService)
     {
         _context = context;
         _inventoryService = inventoryService;
