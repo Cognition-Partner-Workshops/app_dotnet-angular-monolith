@@ -36,16 +36,20 @@ public class InventoryController : ControllerBase
     }
 
     [HttpPost("product/{productId}/deduct")]
-    public async Task<IActionResult> Deduct(int productId, [FromBody] DeductRequest request)
+    public async Task<IActionResult> DeductStock(int productId, [FromBody] DeductRequest request)
     {
         try
         {
-            var item = await _inventoryClient.DeductStockAsync(productId, request.Quantity);
+            var item = await _inventoryService.DeductStockAsync(productId, request.Quantity);
             return Ok(item);
         }
         catch (InvalidOperationException ex)
         {
             return Conflict(new { error = ex.Message });
+        }
+        catch (HttpRequestException)
+        {
+            return StatusCode(502, new { error = "Inventory service unavailable" });
         }
     }
 
@@ -57,20 +61,6 @@ public class InventoryController : ControllerBase
     {
         var available = await _inventoryService.CheckStockAsync(productId, quantity);
         return Ok(new { productId, quantity, available });
-    }
-
-    [HttpPost("product/{productId}/deduct")]
-    public async Task<IActionResult> DeductStock(int productId, [FromBody] DeductRequest request)
-    {
-        try
-        {
-            var item = await _inventoryService.DeductStockAsync(productId, request.Quantity);
-            return Ok(item);
-        }
-        catch (HttpRequestException)
-        {
-            return StatusCode(502, new { error = "Inventory service unavailable" });
-        }
     }
 }
 
