@@ -31,9 +31,6 @@ public class InventoryController : ControllerBase
         return Ok(item);
     }
 
-    [HttpGet("low-stock")]
-    public async Task<IActionResult> GetLowStock() => Ok(await _inventoryClient.GetLowStockItemsAsync());
-
     [HttpPost("product/{productId}/deduct")]
     public async Task<IActionResult> Deduct(int productId, [FromBody] DeductRequest request)
     {
@@ -51,6 +48,9 @@ public class InventoryController : ControllerBase
             return NotFound(new { error = ex.Message });
         }
     }
+
+    [HttpGet("low-stock")]
+    public async Task<IActionResult> GetLowStock() => Ok(await _inventoryClient.GetLowStockItemsAsync());
 }
 
 public record RestockRequest(int Quantity);
