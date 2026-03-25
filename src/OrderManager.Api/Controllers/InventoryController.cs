@@ -3,6 +3,10 @@ using OrderManager.Api.Services;
 
 namespace OrderManager.Api.Controllers;
 
+/// <summary>
+/// Proxies inventory requests to the standalone inventory-service.
+/// Kept so existing frontend routes continue to work during migration.
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class InventoryController : ControllerBase
