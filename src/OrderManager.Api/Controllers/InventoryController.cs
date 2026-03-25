@@ -1,15 +1,19 @@
 using Microsoft.AspNetCore.Mvc;
-using OrderManager.Api.Clients;
+using OrderManager.Api.Services;
 
 namespace OrderManager.Api.Controllers;
 
+/// <summary>
+/// Inventory controller that proxies requests to the inventory microservice.
+/// Maintains backward-compatible API surface for existing Angular frontend.
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class InventoryController : ControllerBase
 {
-    private readonly IInventoryClient _inventoryClient;
+    private readonly InventoryServiceClient _inventoryClient;
 
-    public InventoryController(IInventoryClient inventoryClient)
+    public InventoryController(InventoryServiceClient inventoryClient)
     {
         _inventoryClient = inventoryClient;
     }
@@ -32,7 +36,7 @@ public class InventoryController : ControllerBase
     }
 
     [HttpGet("low-stock")]
-    public async Task<IActionResult> GetLowStock() => Ok(await _inventoryService.GetLowStockItemsAsync());
+    public async Task<IActionResult> GetLowStock() => Ok(await _inventoryClient.GetLowStockItemsAsync());
 }
 
 public record RestockRequest(int Quantity);
