@@ -36,13 +36,6 @@ public class InventoryHttpClient
             ?? throw new InvalidOperationException("Failed to deserialize restock response");
     }
 
-    public async Task<InventoryDto> DeductStockAsync(int productId, int quantity)
-    {
-        var response = await _httpClient.GetAsync("/api/inventory/low-stock");
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<List<InventoryItem>>() ?? new List<InventoryItem>();
-    }
-
     public async Task<bool> CheckStockAsync(int productId, int quantity)
     {
         var response = await _httpClient.GetAsync($"/api/inventory/product/{productId}/check?quantity={quantity}");
@@ -51,7 +44,7 @@ public class InventoryHttpClient
         return result?.Available ?? false;
     }
 
-    public async Task<InventoryItem> DeductStockAsync(int productId, int quantity)
+    public async Task<InventoryDto?> DeductStockAsync(int productId, int quantity)
     {
         var response = await _httpClient.PostAsJsonAsync($"/api/inventory/product/{productId}/deduct", new { quantity });
         if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
