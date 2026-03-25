@@ -18,10 +18,11 @@ builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<CustomerService>();
 
-var inventoryServiceUrl = builder.Configuration["InventoryServiceUrl"] ?? "http://localhost:5100";
-builder.Services.AddHttpClient<InventoryApiClient>(client =>
+// Inventory is now a standalone microservice — use HTTP client instead of in-process service
+builder.Services.AddHttpClient<InventoryServiceHttpClient>(client =>
 {
-    client.BaseAddress = new Uri(inventoryServiceUrl);
+    var baseUrl = builder.Configuration["InventoryServiceUrl"] ?? "http://localhost:5002";
+    client.BaseAddress = new Uri(baseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 

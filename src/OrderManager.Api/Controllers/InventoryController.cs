@@ -3,13 +3,17 @@ using OrderManager.Api.Clients;
 
 namespace OrderManager.Api.Controllers;
 
+/// <summary>
+/// Proxies inventory requests to the standalone inventory-service microservice.
+/// This controller replaces the former in-process InventoryService with HTTP calls.
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class InventoryController : ControllerBase
 {
-    private readonly InventoryApiClient _inventoryClient;
+    private readonly InventoryServiceHttpClient _inventoryClient;
 
-    public InventoryController(InventoryApiClient inventoryClient)
+    public InventoryController(InventoryServiceHttpClient inventoryClient)
     {
         _inventoryClient = inventoryClient;
     }
@@ -32,14 +36,7 @@ public class InventoryController : ControllerBase
     }
 
     [HttpGet("low-stock")]
-    public async Task<IActionResult> GetLowStock() => Ok(await _inventoryService.GetLowStockItemsAsync());
-
-    [HttpGet("product/{productId}/check")]
-    public async Task<IActionResult> CheckStock(int productId, [FromQuery] int quantity = 1)
-    {
-        var available = await _inventoryService.CheckStockAsync(productId, quantity);
-        return Ok(new { productId, quantity, available });
-    }
+    public async Task<IActionResult> GetLowStock() => Ok(await _inventoryClient.GetLowStockItemsAsync());
 }
 
 public record RestockRequest(int Quantity);
