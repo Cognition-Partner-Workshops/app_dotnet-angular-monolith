@@ -11,9 +11,9 @@ namespace OrderManager.Api.Controllers;
 [Route("api/[controller]")]
 public class InventoryController : ControllerBase
 {
-    private readonly InventoryServiceClient _inventoryClient;
+    private readonly IInventoryServiceClient _inventoryClient;
 
-    public InventoryController(InventoryServiceClient inventoryClient)
+    public InventoryController(IInventoryServiceClient inventoryClient)
     {
         _inventoryClient = inventoryClient;
     }
@@ -54,3 +54,4 @@ public class InventoryController : ControllerBase
 }
 
 public record RestockRequest(int Quantity);
+public record DeductRequest(int Quantity);

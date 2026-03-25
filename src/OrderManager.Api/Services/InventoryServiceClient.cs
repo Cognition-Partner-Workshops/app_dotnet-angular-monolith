@@ -3,10 +3,22 @@ using System.Net.Http.Json;
 namespace OrderManager.Api.Services;
 
 /// <summary>
+/// Contract for inventory operations (calls the inventory microservice).
+/// </summary>
+public interface IInventoryServiceClient
+{
+    Task<List<InventoryItemDto>> GetAllInventoryAsync();
+    Task<InventoryItemDto?> GetInventoryByProductIdAsync(int productId);
+    Task<InventoryItemDto> RestockAsync(int productId, int quantity);
+    Task<List<InventoryItemDto>> GetLowStockItemsAsync();
+    Task<InventoryItemDto?> DeductStockAsync(int productId, int quantity);
+}
+
+/// <summary>
 /// HTTP client for communicating with the standalone inventory microservice.
 /// Replaces direct database access for inventory operations.
 /// </summary>
-public class InventoryServiceClient
+public class InventoryServiceClient : IInventoryServiceClient
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<InventoryServiceClient> _logger;
