@@ -12,7 +12,7 @@ public class OrderService
     public OrderService(AppDbContext context, IInventoryServiceClient inventoryClient)
     {
         _context = context;
-        _inventoryClient = inventoryClient;
+        _inventoryService = inventoryService;
     }
 
     public async Task<List<Order>> GetAllOrdersAsync()
@@ -50,6 +50,10 @@ public class OrderService
 
             // Deduct stock via the inventory service (HTTP call to the microservice)
             await _inventoryClient.DeductStockAsync(productId, quantity);
+
+            var deducted = await _inventoryService.DeductStockAsync(productId, quantity);
+            if (deducted is null)
+                throw new InvalidOperationException($"Failed to deduct stock for {product.Name}");
 
             order.Items.Add(new OrderItem
             {
