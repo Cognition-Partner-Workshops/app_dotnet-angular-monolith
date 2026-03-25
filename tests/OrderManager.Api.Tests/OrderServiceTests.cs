@@ -1,7 +1,10 @@
+using System.Net;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using OrderManager.Api.Data;
 using OrderManager.Api.Models;
 using OrderManager.Api.Services;
+using Xunit;
 
 namespace OrderManager.Api.Tests;
 
@@ -17,40 +20,95 @@ public class OrderServiceTests
         return context;
     }
 
+    private static InventoryHttpClient CreateInventoryClient(bool stockAvailable = true, bool deductSuccess = true)
+    {
+        var handler = new MockHttpHandler(stockAvailable, deductSuccess);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost:5002") };
+        return new InventoryHttpClient(httpClient);
+    }
+
     [Fact]
     public async Task GetAllOrders_ReturnsEmptyList_WhenNoOrders()
     {
         using var context = CreateContext();
-        var service = new OrderService(context);
+        var inventoryClient = CreateInventoryClient();
+        var service = new OrderService(context, inventoryClient);
         var orders = await service.GetAllOrdersAsync();
         Assert.Empty(orders);
     }
 
     [Fact]
-    public async Task CreateOrder_DeductsInventory()
+    public async Task CreateOrder_SucceedsWhenStockAvailable()
     {
         using var context = CreateContext();
-        var service = new OrderService(context);
+        var inventoryClient = CreateInventoryClient(stockAvailable: true, deductSuccess: true);
+        var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
-        var inventoryBefore = await context.InventoryItems.FirstAsync(i => i.ProductId == product.Id);
-        var qtyBefore = inventoryBefore.QuantityOnHand;
 
-        await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
+        var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
-        var inventoryAfter = await context.InventoryItems.FirstAsync(i => i.ProductId == product.Id);
-        Assert.Equal(qtyBefore - 5, inventoryAfter.QuantityOnHand);
+        Assert.NotNull(order);
+        Assert.Single(order.Items);
     }
 
     [Fact]
     public async Task CreateOrder_ThrowsOnInsufficientStock()
     {
         using var context = CreateContext();
-        var service = new OrderService(context);
+        var inventoryClient = CreateInventoryClient(stockAvailable: false);
+        var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 99999) }));
+    }
+}
+
+internal class MockHttpHandler : HttpMessageHandler
+{
+    private readonly bool _stockAvailable;
+    private readonly bool _deductSuccess;
+
+    public MockHttpHandler(bool stockAvailable, bool deductSuccess)
+    {
+        _stockAvailable = stockAvailable;
+        _deductSuccess = deductSuccess;
+    }
+
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        var path = request.RequestUri?.PathAndQuery ?? "";
+
+        if (path.Contains("/check"))
+        {
+            var json = JsonSerializer.Serialize(new { productId = 1, quantity = 1, available = _stockAvailable });
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+            });
+        }
+
+        if (path.Contains("/deduct"))
+        {
+            if (!_deductSuccess)
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                {
+                    Content = new StringContent("{\"error\":\"Insufficient stock\"}", System.Text.Encoding.UTF8, "application/json")
+                });
+            }
+            var json = JsonSerializer.Serialize(new { id = 1, productId = 1, productName = "Widget A", sku = "WGT-001", quantityOnHand = 45, reorderLevel = 10, warehouseLocation = "A-01", lastRestocked = DateTime.UtcNow });
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
+            });
+        }
+
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("[]", System.Text.Encoding.UTF8, "application/json")
+        });
     }
 }
