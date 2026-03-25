@@ -4,63 +4,39 @@ using OrderManager.Api.Services;
 namespace OrderManager.Api.Controllers;
 
 /// <summary>
-/// Proxies inventory requests to the inventory-service microservice.
+/// Inventory controller that proxies requests to the inventory microservice.
 /// Maintains backward-compatible API surface for existing Angular frontend.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class InventoryController : ControllerBase
 {
-    private readonly InventoryService _inventoryService;
+    private readonly InventoryServiceClient _inventoryClient;
 
-    public InventoryController(InventoryService inventoryService)
+    public InventoryController(InventoryServiceClient inventoryClient)
     {
-        _inventoryService = inventoryService;
+        _inventoryClient = inventoryClient;
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll() => Ok(await _inventoryService.GetAllInventoryAsync());
+    public async Task<IActionResult> GetAll() => Ok(await _inventoryClient.GetAllInventoryAsync());
 
     [HttpGet("product/{productId}")]
     public async Task<IActionResult> GetByProduct(int productId)
     {
-        var item = await _inventoryService.GetInventoryByProductIdAsync(productId);
+        var item = await _inventoryClient.GetInventoryByProductIdAsync(productId);
         return item is null ? NotFound() : Ok(item);
     }
 
     [HttpPost("product/{productId}/restock")]
     public async Task<IActionResult> Restock(int productId, [FromBody] RestockRequest request)
     {
-        var item = await _inventoryService.RestockAsync(productId, request.Quantity);
+        var item = await _inventoryClient.RestockAsync(productId, request.Quantity);
         return Ok(item);
     }
 
     [HttpGet("low-stock")]
     public async Task<IActionResult> GetLowStock() => Ok(await _inventoryClient.GetLowStockItemsAsync());
-
-    [HttpPost("product/{productId}/deduct")]
-    public async Task<IActionResult> Deduct(int productId, [FromBody] DeductRequest request)
-    {
-        try
-        {
-            var reservationRequest = new StockReservationRequest
-            {
-                Items = new List<StockReservationItem>
-                {
-                    new() { ProductId = productId, Quantity = request.Quantity }
-                }
-            };
-            var result = await _inventoryClient.CheckAndReserveStockAsync(reservationRequest);
-            if (!result.Success)
-                return Conflict(new { error = result.Message });
-            return Ok(result);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new { error = ex.Message });
-        }
-    }
 }
 
 public record RestockRequest(int Quantity);
-public record DeductRequest(int Quantity);
