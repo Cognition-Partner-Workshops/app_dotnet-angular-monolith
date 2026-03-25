@@ -1,18 +1,18 @@
 using Microsoft.AspNetCore.Mvc;
-using OrderManager.Api.Clients;
+using OrderManager.Api.Services;
 
 namespace OrderManager.Api.Controllers;
 
 /// <summary>
-/// Proxies inventory requests to the inventory-service microservice via InventoryService HTTP client.
+/// Proxies inventory requests to the inventory-service microservice via HTTP client.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class InventoryController : ControllerBase
 {
-    private readonly InventoryServiceHttpClient _inventoryClient;
+    private readonly IInventoryServiceClient _inventoryClient;
 
-    public InventoryController(InventoryServiceHttpClient inventoryClient)
+    public InventoryController(IInventoryServiceClient inventoryClient)
     {
         _inventoryClient = inventoryClient;
     }
@@ -35,21 +35,14 @@ public class InventoryController : ControllerBase
     }
 
     [HttpGet("low-stock")]
-    public async Task<IActionResult> GetLowStock() => Ok(await _inventoryService.GetLowStockItemsAsync());
-
-    [HttpGet("product/{productId}/check")]
-    public async Task<IActionResult> CheckStock(int productId, [FromQuery] int quantity = 1)
-    {
-        var available = await _inventoryService.CheckStockAsync(productId, quantity);
-        return Ok(new { productId, quantity, available });
-    }
+    public async Task<IActionResult> GetLowStock() => Ok(await _inventoryClient.GetLowStockItemsAsync());
 
     [HttpPost("product/{productId}/deduct")]
     public async Task<IActionResult> DeductStock(int productId, [FromBody] DeductRequest request)
     {
         try
         {
-            var item = await _inventoryService.DeductStockAsync(productId, request.Quantity);
+            var item = await _inventoryClient.DeductStockAsync(productId, request.Quantity);
             return Ok(item);
         }
         catch (HttpRequestException)

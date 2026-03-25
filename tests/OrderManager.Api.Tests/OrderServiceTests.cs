@@ -1,10 +1,6 @@
-using System.Net;
-using System.Net.Http.Json;
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 using OrderManager.Api.Data;
-using OrderManager.Api.Models;
 using OrderManager.Api.Services;
 
 namespace OrderManager.Api.Tests;
@@ -16,41 +12,42 @@ namespace OrderManager.Api.Tests;
 /// </summary>
 public class MockInventoryServiceClient : IInventoryServiceClient
 {
-    private readonly Dictionary<int, InventoryItem> _inventory = new()
+    private readonly Dictionary<int, InventoryDto> _inventory = new()
     {
-        [1] = new InventoryItem { Id = 1, ProductId = 1, ProductName = "Widget A", QuantityOnHand = 50, ReorderLevel = 10, WarehouseLocation = "A-01" },
-        [2] = new InventoryItem { Id = 2, ProductId = 2, ProductName = "Widget B", QuantityOnHand = 100, ReorderLevel = 10, WarehouseLocation = "A-02" },
-        [3] = new InventoryItem { Id = 3, ProductId = 3, ProductName = "Gadget X", QuantityOnHand = 150, ReorderLevel = 10, WarehouseLocation = "A-03" },
-        [4] = new InventoryItem { Id = 4, ProductId = 4, ProductName = "Gadget Y", QuantityOnHand = 200, ReorderLevel = 10, WarehouseLocation = "A-04" },
-        [5] = new InventoryItem { Id = 5, ProductId = 5, ProductName = "Thingamajig", QuantityOnHand = 250, ReorderLevel = 10, WarehouseLocation = "A-05" },
+        [1] = new InventoryDto(1, 1, "Widget A", "WGT-001", 50, 10, "A-01", DateTime.UtcNow),
+        [2] = new InventoryDto(2, 2, "Widget B", "WGT-002", 100, 10, "A-02", DateTime.UtcNow),
+        [3] = new InventoryDto(3, 3, "Gadget X", "GDG-001", 150, 10, "A-03", DateTime.UtcNow),
+        [4] = new InventoryDto(4, 4, "Gadget Y", "GDG-002", 200, 10, "A-04", DateTime.UtcNow),
+        [5] = new InventoryDto(5, 5, "Thingamajig", "THG-001", 250, 10, "A-05", DateTime.UtcNow),
     };
 
-    public Task<List<InventoryItem>> GetAllInventoryAsync()
+    public Task<List<InventoryDto>> GetAllInventoryAsync()
         => Task.FromResult(_inventory.Values.ToList());
 
-    public Task<InventoryItem?> GetInventoryByProductIdAsync(int productId)
+    public Task<InventoryDto?> GetInventoryByProductIdAsync(int productId)
         => Task.FromResult(_inventory.TryGetValue(productId, out var item) ? item : null);
 
-    public Task<InventoryItem> RestockAsync(int productId, int quantity)
+    public Task<InventoryDto> RestockAsync(int productId, int quantity)
     {
         if (!_inventory.TryGetValue(productId, out var item))
             throw new ArgumentException($"Product {productId} not found");
-        item.QuantityOnHand += quantity;
-        item.LastRestocked = DateTime.UtcNow;
-        return Task.FromResult(item);
+        var updated = item with { QuantityOnHand = item.QuantityOnHand + quantity, LastRestocked = DateTime.UtcNow };
+        _inventory[productId] = updated;
+        return Task.FromResult(updated);
     }
 
-    public Task<List<InventoryItem>> GetLowStockItemsAsync()
+    public Task<List<InventoryDto>> GetLowStockItemsAsync()
         => Task.FromResult(_inventory.Values.Where(i => i.QuantityOnHand <= i.ReorderLevel).ToList());
 
-    public Task<InventoryItem?> DeductStockAsync(int productId, int quantity)
+    public Task<InventoryDto?> DeductStockAsync(int productId, int quantity)
     {
         if (!_inventory.TryGetValue(productId, out var item))
-            return Task.FromResult<InventoryItem?>(null);
+            return Task.FromResult<InventoryDto?>(null);
         if (item.QuantityOnHand < quantity)
             throw new InvalidOperationException($"Insufficient stock for product {productId}");
-        item.QuantityOnHand -= quantity;
-        return Task.FromResult<InventoryItem?>(item);
+        var updated = item with { QuantityOnHand = item.QuantityOnHand - quantity };
+        _inventory[productId] = updated;
+        return Task.FromResult<InventoryDto?>(updated);
     }
 
     public Task<int> GetStockLevelAsync(int productId)
