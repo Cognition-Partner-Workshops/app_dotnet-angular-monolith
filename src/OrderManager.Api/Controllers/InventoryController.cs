@@ -7,9 +7,9 @@ namespace OrderManager.Api.Controllers;
 [Route("api/[controller]")]
 public class InventoryController : ControllerBase
 {
-    private readonly InventoryHttpClient _inventoryClient;
+    private readonly IInventoryServiceClient _inventoryClient;
 
-    public InventoryController(InventoryHttpClient inventoryClient)
+    public InventoryController(IInventoryServiceClient inventoryClient)
     {
         _inventoryClient = inventoryClient;
     }
@@ -28,7 +28,7 @@ public class InventoryController : ControllerBase
     public async Task<IActionResult> Restock(int productId, [FromBody] RestockRequest request)
     {
         var item = await _inventoryClient.RestockAsync(productId, request.Quantity);
-        return item is null ? BadRequest("Restock failed") : Ok(item);
+        return Ok(item);
     }
 
     [HttpGet("low-stock")]
