@@ -1,14 +1,54 @@
-using System.Net;
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Moq.Protected;
 using OrderManager.Api.Data;
 using OrderManager.Api.Services;
-using Xunit;
 
 namespace OrderManager.Api.Tests;
+
+/// <summary>
+/// In-memory fake that implements IInventoryServiceClient for unit tests.
+/// </summary>
+public class FakeInventoryServiceClient : IInventoryServiceClient
+{
+    private readonly Dictionary<int, int> _stock;
+
+    public FakeInventoryServiceClient()
+    {
+        _stock = new Dictionary<int, int>
+        {
+            { 1, 50 }, { 2, 100 }, { 3, 150 }, { 4, 200 }, { 5, 250 }
+        };
+    }
+
+    public Task<List<InventoryDto>> GetAllInventoryAsync() =>
+        Task.FromResult(_stock.Select(kv => new InventoryDto { ProductId = kv.Key, QuantityOnHand = kv.Value }).ToList());
+
+    public Task<InventoryDto?> GetInventoryByProductIdAsync(int productId) =>
+        Task.FromResult(_stock.ContainsKey(productId)
+            ? new InventoryDto { ProductId = productId, QuantityOnHand = _stock[productId] }
+            : null);
+
+    public Task<InventoryDto> RestockAsync(int productId, int quantity)
+    {
+        _stock[productId] = _stock.GetValueOrDefault(productId) + quantity;
+        return Task.FromResult(new InventoryDto { ProductId = productId, QuantityOnHand = _stock[productId] });
+    }
+
+    public Task<InventoryDto> DeductStockAsync(int productId, int quantity)
+    {
+        if (!_stock.ContainsKey(productId))
+            throw new InvalidOperationException($"No inventory record for product {productId}");
+        if (_stock[productId] < quantity)
+            throw new InvalidOperationException($"Insufficient stock for product {productId}");
+        _stock[productId] -= quantity;
+        return Task.FromResult(new InventoryDto { ProductId = productId, QuantityOnHand = _stock[productId] });
+    }
+
+    public Task<List<InventoryDto>> GetLowStockItemsAsync() =>
+        Task.FromResult(_stock.Where(kv => kv.Value <= 10).Select(kv => new InventoryDto { ProductId = kv.Key, QuantityOnHand = kv.Value }).ToList());
+}
 
 public class OrderServiceTests
 {

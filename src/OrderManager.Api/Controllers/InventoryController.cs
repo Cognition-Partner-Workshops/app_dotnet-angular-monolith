@@ -4,7 +4,7 @@ using OrderManager.Api.Services;
 namespace OrderManager.Api.Controllers;
 
 /// <summary>
-/// Inventory controller that proxies requests to the inventory microservice.
+/// Proxies inventory requests to the inventory-service microservice.
 /// Maintains backward-compatible API surface for existing Angular frontend.
 /// </summary>
 [ApiController]
@@ -47,10 +47,6 @@ public class InventoryController : ControllerBase
         {
             return Conflict(new { error = ex.Message });
         }
-        catch (ArgumentException ex)
-        {
-            return NotFound(new { error = ex.Message });
-        }
     }
 
     [HttpGet("low-stock")]
@@ -58,4 +54,3 @@ public class InventoryController : ControllerBase
 }
 
 public record RestockRequest(int Quantity);
-public record DeductRequest(int Quantity);
