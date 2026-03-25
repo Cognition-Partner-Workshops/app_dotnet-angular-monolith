@@ -1,6 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Moq;
-using Xunit;
 using OrderManager.Api.Data;
 using OrderManager.Api.Models;
 using OrderManager.Api.Services;
@@ -8,13 +6,18 @@ using Xunit;
 
 namespace OrderManager.Api.Tests;
 
-public class FakeInventoryClient : IInventoryServiceClient
+public class FakeInventoryServiceClient : IInventoryServiceClient
 {
-    private readonly bool _shouldFail;
+    private readonly Dictionary<int, int> _stock;
+    private readonly bool _shouldThrowOnDeduct;
 
-    public FakeInventoryClient(bool shouldFail = false)
+    public FakeInventoryServiceClient(bool shouldThrowOnDeduct = false)
     {
-        _shouldFail = shouldFail;
+        _stock = new Dictionary<int, int>
+        {
+            { 1, 100 }, { 2, 100 }, { 3, 100 }, { 4, 100 }, { 5, 100 }
+        };
+        _shouldThrowOnDeduct = shouldThrowOnDeduct;
     }
 
     public Task<List<InventoryItem>> GetAllInventoryAsync() =>
@@ -41,10 +44,16 @@ public class FakeInventoryClient : IInventoryServiceClient
 
     public Task<InventoryItem> DeductStockAsync(int productId, int quantity)
     {
-        if (_shouldFail)
+        if (_shouldThrowOnDeduct)
             throw new InvalidOperationException("Insufficient stock");
-        return Task.FromResult(new InventoryItem { ProductId = productId, QuantityOnHand = 100 - quantity });
+        _stock[productId] = _stock.GetValueOrDefault(productId) - quantity;
+        return Task.FromResult(new InventoryItem { ProductId = productId, QuantityOnHand = _stock[productId] });
     }
+
+    public Task<List<InventoryItem>> GetLowStockItemsAsync() =>
+        Task.FromResult(_stock.Where(kv => kv.Value <= 10)
+            .Select(kv => new InventoryItem { ProductId = kv.Key, QuantityOnHand = kv.Value })
+            .ToList());
 }
 
 public class OrderServiceTests
@@ -73,8 +82,6 @@ public class OrderServiceTests
     public async Task CreateOrder_DeductsStockViaMicroservice()
     {
         using var context = CreateContext();
-        var inventoryClient = new FakeInventoryServiceClient();
-        var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
