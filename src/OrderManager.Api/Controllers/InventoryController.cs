@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using OrderManager.Api.Services;
+using OrderManager.Api.Clients;
 
 namespace OrderManager.Api.Controllers;
 
@@ -7,9 +7,9 @@ namespace OrderManager.Api.Controllers;
 [Route("api/[controller]")]
 public class InventoryController : ControllerBase
 {
-    private readonly InventoryHttpClient _inventoryClient;
+    private readonly IInventoryClient _inventoryClient;
 
-    public InventoryController(InventoryHttpClient inventoryClient)
+    public InventoryController(IInventoryClient inventoryClient)
     {
         _inventoryClient = inventoryClient;
     }
