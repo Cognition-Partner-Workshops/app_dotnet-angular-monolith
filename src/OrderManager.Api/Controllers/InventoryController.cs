@@ -3,9 +3,6 @@ using OrderManager.Api.Services;
 
 namespace OrderManager.Api.Controllers;
 
-/// <summary>
-/// Proxies inventory requests to the inventory-service microservice via HTTP client.
-/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class InventoryController : ControllerBase
@@ -45,18 +42,25 @@ public class InventoryController : ControllerBase
     }
 
     [HttpPost("product/{productId}/deduct")]
-    public async Task<IActionResult> DeductStock(int productId, [FromBody] DeductRequest request)
+    public async Task<IActionResult> Deduct(int productId, [FromBody] DeductRequest request)
     {
         try
         {
             var item = await _inventoryService.DeductStockAsync(productId, request.Quantity);
             return Ok(item);
         }
-        catch (HttpRequestException)
+        catch (InvalidOperationException ex)
         {
-            return StatusCode(502, new { error = "Inventory service unavailable" });
+            return Conflict(new { error = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return NotFound(new { error = ex.Message });
         }
     }
+
+    [HttpGet("low-stock")]
+    public async Task<IActionResult> GetLowStock() => Ok(await _inventoryClient.GetLowStockItemsAsync());
 }
 
 public record RestockRequest(int Quantity);
