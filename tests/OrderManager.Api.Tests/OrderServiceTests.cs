@@ -6,13 +6,10 @@ using OrderManager.Api.Services;
 
 namespace OrderManager.Api.Tests;
 
-/// <summary>
-/// In-memory mock of IInventoryServiceClient for testing.
-/// </summary>
 public class FakeInventoryServiceClient : IInventoryServiceClient
 {
     private readonly Dictionary<int, int> _stock;
-    private readonly bool _shouldThrowOnDeduct;
+    private readonly bool _shouldFail;
 
     public FakeInventoryServiceClient(bool shouldThrowOnDeduct = false)
     {
@@ -20,7 +17,7 @@ public class FakeInventoryServiceClient : IInventoryServiceClient
         {
             { 1, 50 }, { 2, 100 }, { 3, 150 }, { 4, 200 }, { 5, 250 }
         };
-        _shouldThrowOnDeduct = shouldThrowOnDeduct;
+        _shouldFail = shouldThrowOnDeduct;
     }
 
     public Task<List<InventoryItem>> GetAllInventoryAsync() =>
