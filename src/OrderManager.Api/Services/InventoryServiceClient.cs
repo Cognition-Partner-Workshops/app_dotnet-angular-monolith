@@ -6,7 +6,7 @@ namespace OrderManager.Api.Services;
 /// HTTP client for communicating with the standalone inventory microservice.
 /// Replaces direct database access for inventory operations.
 /// </summary>
-public class InventoryServiceClient
+public class InventoryServiceClient : IInventoryServiceClient
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<InventoryServiceClient> _logger;
