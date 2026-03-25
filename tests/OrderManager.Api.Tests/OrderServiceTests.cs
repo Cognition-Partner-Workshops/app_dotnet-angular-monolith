@@ -1,6 +1,4 @@
 using System.Net;
-using System.Net.Http.Json;
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using OrderManager.Api.Data;
 using OrderManager.Api.Services;
@@ -20,19 +18,19 @@ public class OrderServiceTests
         return context;
     }
 
-    private static InventoryService CreateInventoryService(HttpStatusCode deductStatus, object? deductBody = null)
+    private static InventoryApiClient CreateInventoryApiClient(HttpStatusCode deductStatus)
     {
-        var handler = new FakeHttpMessageHandler(deductStatus, deductBody);
+        var handler = new FakeHttpMessageHandler(deductStatus);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost:5100") };
-        return new InventoryService(httpClient);
+        return new InventoryApiClient(httpClient);
     }
 
     [Fact]
     public async Task GetAllOrders_ReturnsEmptyList_WhenNoOrders()
     {
         using var context = CreateContext();
-        var inventoryService = CreateInventoryService(HttpStatusCode.OK);
-        var service = new OrderService(context, inventoryService);
+        var client = CreateInventoryApiClient(HttpStatusCode.OK);
+        var service = new OrderService(context, client);
         var orders = await service.GetAllOrdersAsync();
         Assert.Empty(orders);
     }
@@ -44,62 +42,43 @@ public class OrderServiceTests
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
-        var deductResponse = new InventoryItemDto
-        {
-            Id = 1,
-            ProductId = product.Id,
-            ProductName = product.Name,
-            QuantityOnHand = 45,
-            ReorderLevel = 10,
-            WarehouseLocation = "A-01"
-        };
-        var inventoryService = CreateInventoryService(HttpStatusCode.OK, deductResponse);
-        var service = new OrderService(context, inventoryService);
+        var client = CreateInventoryApiClient(HttpStatusCode.OK);
+        var service = new OrderService(context, client);
 
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
-        Assert.NotNull(order);
         Assert.Single(order.Items);
-        Assert.Equal(5, order.Items.First().Quantity);
+        Assert.Equal(product.Price * 5, order.TotalAmount);
     }
 
     [Fact]
-    public async Task CreateOrder_ThrowsOnInsufficientStock()
+    public async Task CreateOrder_ThrowsWhenInventoryServiceReturnsConflict()
     {
         using var context = CreateContext();
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
-        // inventory-service returns 500 on insufficient stock → EnsureSuccessStatusCode throws
-        var inventoryService = CreateInventoryService(HttpStatusCode.InternalServerError);
-        var service = new OrderService(context, inventoryService);
+        // inventory-service returns Conflict on insufficient stock
+        var client = CreateInventoryApiClient(HttpStatusCode.Conflict);
+        var service = new OrderService(context, client);
 
-        await Assert.ThrowsAsync<HttpRequestException>(
+        await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 99999) }));
     }
 }
 
 internal class FakeHttpMessageHandler : HttpMessageHandler
 {
-    private readonly HttpStatusCode _statusCode;
-    private readonly object? _responseBody;
+    private readonly HttpStatusCode _deductStatusCode;
 
-    public FakeHttpMessageHandler(HttpStatusCode statusCode, object? responseBody = null)
+    public FakeHttpMessageHandler(HttpStatusCode deductStatusCode)
     {
-        _statusCode = statusCode;
-        _responseBody = responseBody;
+        _deductStatusCode = deductStatusCode;
     }
 
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        var response = new HttpResponseMessage(_statusCode);
-        if (_responseBody != null)
-        {
-            response.Content = new StringContent(
-                JsonSerializer.Serialize(_responseBody),
-                System.Text.Encoding.UTF8,
-                "application/json");
-        }
+        var response = new HttpResponseMessage(_deductStatusCode);
         return Task.FromResult(response);
     }
 }
