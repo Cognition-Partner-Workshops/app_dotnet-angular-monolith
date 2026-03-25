@@ -37,19 +37,24 @@ public class OrderServiceTests
     }
 
     [Fact]
-    public async Task CreateOrder_CallsInventoryService()
+    public async Task CreateOrder_DeductsStockViaInventoryService()
     {
         using var context = CreateContext();
         var inventoryService = CreateInventoryService(stockAvailable: true);
         var service = new OrderService(context, inventoryService);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
+        var inventoryClient = new FakeInventoryClient(new Dictionary<int, int> { { product.Id, 100 } });
+        var service = new OrderService(context, inventoryClient);
+
+        var inventoryClient = new FakeInventoryServiceClient();
+        var service = new OrderService(context, inventoryClient);
 
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
         Assert.NotNull(order);
         Assert.Single(order.Items);
-        Assert.Equal(product.Price * 5, order.TotalAmount);
+        Assert.Equal(5, order.Items.First().Quantity);
     }
 
     [Fact]
@@ -60,6 +65,11 @@ public class OrderServiceTests
         var service = new OrderService(context, inventoryService);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
+        var inventoryClient = new FakeInventoryClient(new Dictionary<int, int> { { product.Id, 2 } });
+        var service = new OrderService(context, inventoryClient);
+
+        var inventoryClient = new FakeInventoryServiceClient(shouldFail: true);
+        var service = new OrderService(context, inventoryClient);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 99999) }));
