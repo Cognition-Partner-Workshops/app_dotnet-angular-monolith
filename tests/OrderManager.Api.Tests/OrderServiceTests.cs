@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using OrderManager.Api.Data;
 using OrderManager.Api.Models;
@@ -21,7 +20,7 @@ public class OrderServiceTests
         return context;
     }
 
-    private static InventoryHttpClient CreateMockInventoryClient(HttpStatusCode statusCode = HttpStatusCode.OK, InventoryItem? responseItem = null)
+    private static InventoryHttpClient CreateMockInventoryClient(HttpStatusCode statusCode = HttpStatusCode.OK, InventoryDto? responseItem = null)
     {
         var handler = new FakeHttpMessageHandler(statusCode, responseItem);
         var httpClient = new HttpClient(handler)
@@ -48,7 +47,7 @@ public class OrderServiceTests
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
-        var fakeItem = new InventoryItem
+        var fakeItem = new InventoryDto
         {
             Id = 1,
             ProductId = product.Id,
@@ -84,9 +83,9 @@ public class OrderServiceTests
 internal class FakeHttpMessageHandler : HttpMessageHandler
 {
     private readonly HttpStatusCode _statusCode;
-    private readonly InventoryItem? _responseItem;
+    private readonly InventoryDto? _responseItem;
 
-    public FakeHttpMessageHandler(HttpStatusCode statusCode, InventoryItem? responseItem = null)
+    public FakeHttpMessageHandler(HttpStatusCode statusCode, InventoryDto? responseItem = null)
     {
         _statusCode = statusCode;
         _responseItem = responseItem;
@@ -110,7 +109,7 @@ internal class FakeHttpMessageHandler : HttpMessageHandler
         }
         else if (_statusCode == HttpStatusCode.OK)
         {
-            response.Content = JsonContent.Create(new List<InventoryItem>());
+            response.Content = JsonContent.Create(new List<InventoryDto>());
         }
 
         return Task.FromResult(response);
