@@ -15,42 +15,40 @@ public class InventoryHttpClient
         _httpClient = httpClient;
     }
 
-    public async Task<List<InventoryItem>> GetAllInventoryAsync()
+    public async Task<List<InventoryItemDto>> GetAllInventoryAsync()
     {
-        var items = await _httpClient.GetFromJsonAsync<List<InventoryItemDto>>("api/inventory");
-        return items?.Select(MapToInventoryItem).ToList() ?? new List<InventoryItem>();
+        return await _httpClient.GetFromJsonAsync<List<InventoryItemDto>>("api/inventory")
+            ?? new List<InventoryItemDto>();
     }
 
-    public async Task<InventoryItem?> GetInventoryByProductIdAsync(int productId)
+    public async Task<InventoryItemDto?> GetInventoryByProductIdAsync(int productId)
     {
         var response = await _httpClient.GetAsync($"api/inventory/product/{productId}");
         if (!response.IsSuccessStatusCode) return null;
-        var dto = await response.Content.ReadFromJsonAsync<InventoryItemDto>();
-        return dto is null ? null : MapToInventoryItem(dto);
+        return await response.Content.ReadFromJsonAsync<InventoryItemDto>();
     }
 
-    public async Task<InventoryItem> RestockAsync(int productId, int quantity)
+    public async Task<InventoryItemDto> RestockAsync(int productId, int quantity)
     {
         var response = await _httpClient.PostAsJsonAsync($"api/inventory/product/{productId}/restock", new { quantity });
         response.EnsureSuccessStatusCode();
-        var dto = await response.Content.ReadFromJsonAsync<InventoryItemDto>()
+        return await response.Content.ReadFromJsonAsync<InventoryItemDto>()
             ?? throw new InvalidOperationException("Failed to deserialize restock response");
-        return MapToInventoryItem(dto);
     }
 
-    public async Task<List<InventoryItem>> GetLowStockItemsAsync()
+    public async Task<List<InventoryItemDto>> GetLowStockItemsAsync()
     {
-        var items = await _httpClient.GetFromJsonAsync<List<InventoryItemDto>>("api/inventory/low-stock");
-        return items?.Select(MapToInventoryItem).ToList() ?? new List<InventoryItem>();
+        return await _httpClient.GetFromJsonAsync<List<InventoryItemDto>>("api/inventory/low-stock")
+            ?? new List<InventoryItemDto>();
     }
 
-    public async Task<bool> DeductStockAsync(int productId, int quantity)
+    public async Task<bool> CheckStockAsync(int productId, int quantity)
     {
-        var result = await _httpClient.GetFromJsonAsync<StockCheckResult>($"api/inventory/product/{productId}/check?quantity={quantity}");
-        return result?.Available ?? false;
+        var item = await GetInventoryByProductIdAsync(productId);
+        return item is not null && item.QuantityOnHand >= quantity;
     }
 
-    public async Task<InventoryItem> DeductStockAsync(int productId, int quantity)
+    public async Task<InventoryItemDto> DeductStockAsync(int productId, int quantity)
     {
         var response = await _httpClient.PostAsJsonAsync($"api/inventory/product/{productId}/deduct", new { quantity });
         if (!response.IsSuccessStatusCode)
@@ -58,22 +56,8 @@ public class InventoryHttpClient
             var error = await response.Content.ReadAsStringAsync();
             throw new InvalidOperationException($"Failed to deduct stock for product {productId}: {error}");
         }
-        var dto = await response.Content.ReadFromJsonAsync<InventoryItemDto>()
+        return await response.Content.ReadFromJsonAsync<InventoryItemDto>()
             ?? throw new InvalidOperationException("Failed to deserialize deduct response");
-        return MapToInventoryItem(dto);
-    }
-
-    private static InventoryItem MapToInventoryItem(InventoryItemDto dto)
-    {
-        return new InventoryItem
-        {
-            Id = dto.Id,
-            ProductId = dto.ProductId,
-            QuantityOnHand = dto.QuantityOnHand,
-            ReorderLevel = dto.ReorderLevel,
-            WarehouseLocation = dto.WarehouseLocation,
-            LastRestocked = dto.LastRestocked
-        };
     }
 }
 
@@ -87,10 +71,4 @@ public class InventoryItemDto
     public int ReorderLevel { get; set; }
     public string WarehouseLocation { get; set; } = string.Empty;
     public DateTime LastRestocked { get; set; }
-}
-
-public class StockLevelDto
-{
-    public int ProductId { get; set; }
-    public int QuantityOnHand { get; set; }
 }
