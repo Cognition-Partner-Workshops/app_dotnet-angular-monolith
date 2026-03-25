@@ -20,19 +20,21 @@ public class OrderServiceTests
         return context;
     }
 
-    private static InventoryHttpClient CreateInventoryClient(HttpStatusCode statusCode, object? responseBody = null)
+    private static InventoryApiClient CreateInventoryClient(bool deductSucceeds = true)
     {
-        var handler = new FakeHttpMessageHandler(statusCode, responseBody);
-        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost:5100") };
-        return new InventoryHttpClient(httpClient);
+        var handler = new FakeInventoryHandler(deductSucceeds);
+        var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("http://fake-inventory-service")
+        };
+        return new InventoryApiClient(httpClient);
     }
 
     [Fact]
     public async Task GetAllOrders_ReturnsEmptyList_WhenNoOrders()
     {
         using var context = CreateContext();
-        var inventoryClient = CreateInventoryClient(HttpStatusCode.OK);
-        var service = new OrderService(context, inventoryClient);
+        var service = new OrderService(context, CreateInventoryClient());
         var orders = await service.GetAllOrdersAsync();
         Assert.Empty(orders);
     }
@@ -41,6 +43,7 @@ public class OrderServiceTests
     public async Task CreateOrder_CallsInventoryServiceToDeductStock()
     {
         using var context = CreateContext();
+        var service = new OrderService(context, CreateInventoryClient(deductSucceeds: true));
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
@@ -68,6 +71,7 @@ public class OrderServiceTests
     public async Task CreateOrder_ThrowsWhenInventoryServiceReturnsConflict()
     {
         using var context = CreateContext();
+        var service = new OrderService(context, CreateInventoryClient(deductSucceeds: false));
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
@@ -81,25 +85,29 @@ public class OrderServiceTests
 
 internal class FakeHttpMessageHandler : HttpMessageHandler
 {
-    private readonly HttpStatusCode _statusCode;
-    private readonly object? _responseBody;
+    private readonly bool _deductSucceeds;
 
-    public FakeHttpMessageHandler(HttpStatusCode statusCode, object? responseBody = null)
+    public FakeInventoryHandler(bool deductSucceeds)
     {
-        _statusCode = statusCode;
-        _responseBody = responseBody;
+        _deductSucceeds = deductSucceeds;
     }
 
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        var response = new HttpResponseMessage(_statusCode);
-        if (_responseBody != null)
+        var path = request.RequestUri?.PathAndQuery ?? "";
+
+        if (path.Contains("/deduct"))
         {
-            response.Content = new StringContent(
-                JsonSerializer.Serialize(_responseBody),
-                System.Text.Encoding.UTF8,
-                "application/json");
+            var status = _deductSucceeds ? HttpStatusCode.OK : HttpStatusCode.Conflict;
+            var content = _deductSucceeds
+                ? JsonContent.Create(new { message = "Stock deducted successfully" })
+                : JsonContent.Create(new { message = "Insufficient stock" });
+            return Task.FromResult(new HttpResponseMessage(status) { Content = content });
         }
-        return Task.FromResult(response);
+
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = JsonContent.Create(new object[] { })
+        });
     }
 }
