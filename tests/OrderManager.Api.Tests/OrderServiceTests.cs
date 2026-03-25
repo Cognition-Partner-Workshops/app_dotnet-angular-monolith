@@ -79,9 +79,11 @@ public class OrderServiceTests
     }
 
     [Fact]
-    public async Task CreateOrder_CallsInventoryServiceToDeductStock()
+    public async Task CreateOrder_CallsInventoryService()
     {
         using var context = CreateContext();
+        var inventoryClient = CreateMockInventoryClient(stockAvailable: true);
+        var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
         var stockLevels = new Dictionary<int, int> { { product.Id, 100 } };
@@ -99,6 +101,8 @@ public class OrderServiceTests
     public async Task CreateOrder_ThrowsOnInsufficientStock()
     {
         using var context = CreateContext();
+        var inventoryClient = CreateMockInventoryClient(stockAvailable: false);
+        var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
         var stockLevels = new Dictionary<int, int> { { product.Id, 2 } };

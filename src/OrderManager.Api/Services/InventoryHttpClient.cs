@@ -2,6 +2,10 @@ using System.Net.Http.Json;
 
 namespace OrderManager.Api.Services;
 
+/// <summary>
+/// HTTP client that proxies inventory operations to the standalone inventory-service microservice.
+/// Replaces the former in-process InventoryService that accessed the shared database directly.
+/// </summary>
 public class InventoryHttpClient
 {
     private readonly HttpClient _httpClient;
@@ -62,6 +66,7 @@ public class InventoryItemDto
     public int Id { get; set; }
     public int ProductId { get; set; }
     public string ProductName { get; set; } = string.Empty;
+    public string Sku { get; set; } = string.Empty;
     public int QuantityOnHand { get; set; }
     public int ReorderLevel { get; set; }
     public string WarehouseLocation { get; set; } = string.Empty;
