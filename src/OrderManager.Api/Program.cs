@@ -12,9 +12,7 @@ builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<CustomerService>();
 
 // Register inventory service HTTP client pointing to the inventory microservice
-var inventoryServiceUrl = builder.Configuration["InventoryServiceUrl"];
-if (string.IsNullOrEmpty(inventoryServiceUrl))
-    inventoryServiceUrl = "http://localhost:5001";
+var inventoryServiceUrl = builder.Configuration["InventoryService:BaseUrl"] ?? "http://localhost:5100";
 
 builder.Services.AddHttpClient<IInventoryServiceClient, InventoryServiceHttpClient>(client =>
 {
