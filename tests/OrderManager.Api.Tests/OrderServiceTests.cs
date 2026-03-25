@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using OrderManager.Api.Clients;
 using OrderManager.Api.Data;
 using OrderManager.Api.Models;
 using OrderManager.Api.Services;
@@ -8,9 +7,9 @@ using Xunit;
 namespace OrderManager.Api.Tests;
 
 /// <summary>
-/// In-memory fake of IInventoryClient for testing OrderService.
+/// In-memory fake of IInventoryServiceClient for testing OrderService.
 /// </summary>
-public class FakeInventoryClient : IInventoryClient
+public class FakeInventoryClient : IInventoryServiceClient
 {
     private readonly Dictionary<int, int> _stock = new();
 
@@ -25,31 +24,28 @@ public class FakeInventoryClient : IInventoryClient
         _stock = initialStock;
     }
 
-    public Task<List<InventoryItemDto>> GetAllInventoryAsync()
-        => Task.FromResult(_stock.Select(kvp => new InventoryItemDto { ProductId = kvp.Key, QuantityOnHand = kvp.Value }).ToList());
+    public Task<List<InventoryItem>> GetAllInventoryAsync()
+        => Task.FromResult(_stock.Select(kvp => new InventoryItem { ProductId = kvp.Key, QuantityOnHand = kvp.Value }).ToList());
 
-    public Task<InventoryItemDto?> GetInventoryByProductIdAsync(int productId)
-        => Task.FromResult(_stock.ContainsKey(productId) ? new InventoryItemDto { ProductId = productId, QuantityOnHand = _stock[productId] } : null);
+    public Task<InventoryItem?> GetInventoryByProductIdAsync(int productId)
+        => Task.FromResult(_stock.ContainsKey(productId) ? new InventoryItem { ProductId = productId, QuantityOnHand = _stock[productId] } : null);
 
-    public Task<InventoryItemDto> RestockAsync(int productId, int quantity)
+    public Task<InventoryItem> RestockAsync(int productId, int quantity)
     {
         _stock[productId] = _stock.GetValueOrDefault(productId) + quantity;
-        return Task.FromResult(new InventoryItemDto { ProductId = productId, QuantityOnHand = _stock[productId] });
+        return Task.FromResult(new InventoryItem { ProductId = productId, QuantityOnHand = _stock[productId] });
     }
 
-    public Task<InventoryItemDto> DeductStockAsync(int productId, int quantity)
+    public Task<InventoryItem> DeductStockAsync(int productId, int quantity)
     {
         if (!_stock.ContainsKey(productId) || _stock[productId] < quantity)
             throw new InvalidOperationException($"Insufficient stock for product {productId}");
         _stock[productId] -= quantity;
-        return Task.FromResult(new InventoryItemDto { ProductId = productId, QuantityOnHand = _stock[productId] });
+        return Task.FromResult(new InventoryItem { ProductId = productId, QuantityOnHand = _stock[productId] });
     }
 
-    public Task<List<InventoryItemDto>> GetLowStockItemsAsync()
-        => Task.FromResult(_stock.Where(kvp => kvp.Value <= 10).Select(kvp => new InventoryItemDto { ProductId = kvp.Key, QuantityOnHand = kvp.Value }).ToList());
-
-    public Task<bool> CheckStockAsync(int productId, int quantity)
-        => Task.FromResult(_stock.ContainsKey(productId) && _stock[productId] >= quantity);
+    public Task<List<InventoryItem>> GetLowStockItemsAsync()
+        => Task.FromResult(_stock.Where(kvp => kvp.Value <= 10).Select(kvp => new InventoryItem { ProductId = kvp.Key, QuantityOnHand = kvp.Value }).ToList());
 }
 
 public class OrderServiceTests
