@@ -8,10 +8,15 @@ namespace OrderManager.Api.Tests;
 
 public class FakeInventoryClient : IInventoryServiceClient
 {
+    private readonly Dictionary<int, int> _stock;
     private readonly bool _shouldFail;
 
     public FakeInventoryClient(bool shouldFail = false)
     {
+        _stock = new Dictionary<int, int>
+        {
+            { 1, 50 }, { 2, 100 }, { 3, 150 }, { 4, 200 }, { 5, 250 }
+        };
         _shouldFail = shouldFail;
     }
 
@@ -39,7 +44,7 @@ public class FakeInventoryClient : IInventoryServiceClient
 
     public Task<InventoryItem> DeductStockAsync(int productId, int quantity)
     {
-        if (_shouldThrowOnDeduct)
+        if (_shouldFail)
             throw new InvalidOperationException($"Insufficient stock for product {productId}");
 
         if (!_stock.ContainsKey(productId))
@@ -76,7 +81,7 @@ public class OrderServiceTests
     public async Task GetAllOrders_ReturnsEmptyList_WhenNoOrders()
     {
         using var context = CreateContext();
-        var inventoryClient = new FakeInventoryServiceClient();
+        var inventoryClient = new FakeInventoryClient();
         var service = new OrderService(context, inventoryClient);
         var orders = await service.GetAllOrdersAsync();
         Assert.Empty(orders);
@@ -89,7 +94,7 @@ public class OrderServiceTests
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
-        var inventoryClient = new FakeInventoryServiceClient();
+        var inventoryClient = new FakeInventoryClient();
         var service = new OrderService(context, inventoryClient);
 
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
@@ -105,7 +110,7 @@ public class OrderServiceTests
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
-        var inventoryClient = new FakeInventoryServiceClient(shouldThrowOnDeduct: true);
+        var inventoryClient = new FakeInventoryClient(shouldFail: true);
         var service = new OrderService(context, inventoryClient);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
