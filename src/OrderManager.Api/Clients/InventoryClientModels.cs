@@ -1,10 +1,6 @@
-namespace OrderManager.Api.Models;
+namespace OrderManager.Api.Clients;
 
-/// <summary>
-/// DTO for inventory data received from the inventory microservice.
-/// This replaces the former EF Core entity that was decomposed into the inventory-service.
-/// </summary>
-public class InventoryItem
+public class InventoryItemDto
 {
     public int Id { get; set; }
     public int ProductId { get; set; }
@@ -13,4 +9,11 @@ public class InventoryItem
     public int ReorderLevel { get; set; }
     public string WarehouseLocation { get; set; } = string.Empty;
     public DateTime LastRestocked { get; set; }
+}
+
+public class StockCheckResult
+{
+    public int ProductId { get; set; }
+    public int Quantity { get; set; }
+    public bool Available { get; set; }
 }

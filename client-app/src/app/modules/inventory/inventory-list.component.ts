@@ -21,6 +21,7 @@ import { environment } from '../../../environments/environment';
 })
 export class InventoryListComponent implements OnInit {
   items: any[] = [];
+  private apiBase = environment.inventoryServiceUrl || environment.apiUrl;
   constructor(private http: HttpClient) {}
   ngOnInit() {
     this.http.get<any[]>(`${environment.inventoryServiceUrl}/api/inventory`).subscribe(data => this.items = data);

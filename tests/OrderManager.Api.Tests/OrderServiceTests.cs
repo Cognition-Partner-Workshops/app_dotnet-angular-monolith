@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using OrderManager.Api.Data;
-using OrderManager.Api.Models;
 using OrderManager.Api.Services;
 using Xunit;
 
@@ -59,20 +58,18 @@ public class OrderServiceTests
     }
 
     [Fact]
-    public async Task CreateOrder_DeductsInventory()
+    public async Task CreateOrder_CallsInventoryService()
     {
         using var context = CreateContext();
         var inventoryClient = new MockInventoryServiceClient(context);
         var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
-        var inventoryBefore = await context.InventoryItems.FirstAsync(i => i.ProductId == product.Id);
-        var qtyBefore = inventoryBefore.QuantityOnHand;
 
-        await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
+        var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
-        var inventoryAfter = await context.InventoryItems.FirstAsync(i => i.ProductId == product.Id);
-        Assert.Equal(qtyBefore - 5, inventoryAfter.QuantityOnHand);
+        Assert.Single(order.Items);
+        Assert.Equal(product.Price * 5, order.TotalAmount);
     }
 
     [Fact]

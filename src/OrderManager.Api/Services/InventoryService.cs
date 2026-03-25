@@ -1,43 +1,72 @@
-using Microsoft.EntityFrameworkCore;
-using OrderManager.Api.Data;
-using OrderManager.Api.Models;
+using System.Net.Http.Json;
 
 namespace OrderManager.Api.Services;
 
 public class InventoryService
 {
-    private readonly AppDbContext _context;
+    private readonly HttpClient _httpClient;
 
-    public InventoryService(AppDbContext context)
+    public InventoryService(HttpClient httpClient)
     {
-        _context = context;
+        _httpClient = httpClient;
     }
 
-    public async Task<List<InventoryItem>> GetAllInventoryAsync()
+    public async Task<List<InventoryItemDto>> GetAllInventoryAsync()
     {
-        return await _context.InventoryItems.Include(i => i.Product).ToListAsync();
+        var items = await _httpClient.GetFromJsonAsync<List<InventoryItemDto>>("api/inventory");
+        return items ?? new List<InventoryItemDto>();
     }
 
-    public async Task<InventoryItem?> GetInventoryByProductIdAsync(int productId)
+    public async Task<InventoryItemDto?> GetInventoryByProductIdAsync(int productId)
     {
-        return await _context.InventoryItems.Include(i => i.Product).FirstOrDefaultAsync(i => i.ProductId == productId);
+        var response = await _httpClient.GetAsync($"api/inventory/product/{productId}");
+        if (!response.IsSuccessStatusCode) return null;
+        return await response.Content.ReadFromJsonAsync<InventoryItemDto>();
     }
 
-    public async Task<InventoryItem> RestockAsync(int productId, int quantity)
+    public async Task<InventoryItemDto> RestockAsync(int productId, int quantity)
     {
-        var item = await _context.InventoryItems.FirstOrDefaultAsync(i => i.ProductId == productId)
-            ?? throw new ArgumentException($"No inventory record for product {productId}");
-        item.QuantityOnHand += quantity;
-        item.LastRestocked = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
-        return item;
+        var response = await _httpClient.PostAsJsonAsync($"api/inventory/product/{productId}/restock", new { quantity });
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<InventoryItemDto>()
+            ?? throw new InvalidOperationException("Failed to deserialize restock response");
     }
 
-    public async Task<List<InventoryItem>> GetLowStockItemsAsync()
+    public async Task<List<InventoryItemDto>> GetLowStockItemsAsync()
     {
-        return await _context.InventoryItems
-            .Include(i => i.Product)
-            .Where(i => i.QuantityOnHand <= i.ReorderLevel)
-            .ToListAsync();
+        var items = await _httpClient.GetFromJsonAsync<List<InventoryItemDto>>("api/inventory/low-stock");
+        return items ?? new List<InventoryItemDto>();
     }
+
+    public async Task<bool> CheckStockAsync(int productId, int quantity)
+    {
+        var response = await _httpClient.GetFromJsonAsync<StockCheckResult>(
+            $"api/inventory/product/{productId}/check?quantity={quantity}");
+        return response?.Available ?? false;
+    }
+
+    public async Task<InventoryItemDto?> DeductStockAsync(int productId, int quantity)
+    {
+        var response = await _httpClient.PostAsJsonAsync($"api/inventory/product/{productId}/deduct", new { quantity });
+        if (!response.IsSuccessStatusCode) return null;
+        return await response.Content.ReadFromJsonAsync<InventoryItemDto>();
+    }
+}
+
+public class InventoryItemDto
+{
+    public int Id { get; set; }
+    public int ProductId { get; set; }
+    public string ProductName { get; set; } = string.Empty;
+    public int QuantityOnHand { get; set; }
+    public int ReorderLevel { get; set; }
+    public string WarehouseLocation { get; set; } = string.Empty;
+    public DateTime LastRestocked { get; set; }
+}
+
+public class StockCheckResult
+{
+    public int ProductId { get; set; }
+    public int Quantity { get; set; }
+    public bool Available { get; set; }
 }
