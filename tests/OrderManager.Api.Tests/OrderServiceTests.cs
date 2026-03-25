@@ -1,14 +1,53 @@
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Moq;
-using Moq.Protected;
 using OrderManager.Api.Data;
 using OrderManager.Api.Models;
 using OrderManager.Api.Services;
-using System.Net;
-using System.Net.Http.Json;
 using Xunit;
 
 namespace OrderManager.Api.Tests;
+
+public class FakeInventoryHandler : HttpMessageHandler
+{
+    private readonly Dictionary<int, int> _stockLevels = new();
+    private readonly bool _deductSuccess;
+
+    public FakeInventoryHandler(Dictionary<int, int> stockLevels, bool deductSuccess = true)
+    {
+        _stockLevels = stockLevels;
+        _deductSuccess = deductSuccess;
+    }
+
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        var path = request.RequestUri?.PathAndQuery ?? "";
+
+        if (path.Contains("/stock-level"))
+        {
+            var productId = int.Parse(path.Split("/product/")[1].Split("/")[0]);
+            var level = _stockLevels.GetValueOrDefault(productId, 0);
+            var response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(new { productId, quantityOnHand = level })
+            };
+            return Task.FromResult(response);
+        }
+
+        if (path.Contains("/deduct"))
+        {
+            var status = _deductSuccess ? HttpStatusCode.OK : HttpStatusCode.BadRequest;
+            var response = new HttpResponseMessage(status)
+            {
+                Content = JsonContent.Create(new { message = _deductSuccess ? "Stock deducted" : "Insufficient stock" })
+            };
+            return Task.FromResult(response);
+        }
+
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+    }
+}
 
 public class OrderServiceTests
 {
@@ -22,34 +61,13 @@ public class OrderServiceTests
         return context;
     }
 
-    private static InventoryHttpClient CreateMockInventoryClient(bool stockAvailable = true, bool deductSuccess = true)
+    private static InventoryHttpClient CreateInventoryClient(bool stockAvailable = true, bool deductSucceeds = true)
     {
-        var handlerMock = new Mock<HttpMessageHandler>();
-
-        handlerMock.Protected()
-            .Setup<Task<HttpResponseMessage>>("SendAsync",
-                ItExpr.Is<HttpRequestMessage>(r => r.RequestUri!.PathAndQuery.Contains("check-stock")),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = JsonContent.Create(new { productId = 1, quantity = 5, available = stockAvailable })
-            });
-
-        handlerMock.Protected()
-            .Setup<Task<HttpResponseMessage>>("SendAsync",
-                ItExpr.Is<HttpRequestMessage>(r => r.RequestUri!.PathAndQuery.Contains("deduct")),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(deductSuccess
-                ? new HttpResponseMessage(HttpStatusCode.OK)
-                {
-                    Content = JsonContent.Create(new InventoryItemDto { ProductId = 1, QuantityOnHand = 45 })
-                }
-                : new HttpResponseMessage(HttpStatusCode.BadRequest)
-                {
-                    Content = JsonContent.Create(new { error = "Insufficient stock" })
-                });
-
-        var httpClient = new HttpClient(handlerMock.Object) { BaseAddress = new Uri("http://localhost:5199") };
+        var handler = new FakeInventoryHandler(stockAvailable, deductSucceeds);
+        var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("http://fake-inventory/")
+        };
         return new InventoryHttpClient(httpClient);
     }
 
@@ -57,37 +75,97 @@ public class OrderServiceTests
     public async Task GetAllOrders_ReturnsEmptyList_WhenNoOrders()
     {
         using var context = CreateContext();
-        var inventoryClient = CreateMockInventoryClient();
+        var inventoryClient = CreateInventoryClient();
         var service = new OrderService(context, inventoryClient);
         var orders = await service.GetAllOrdersAsync();
         Assert.Empty(orders);
     }
 
     [Fact]
-    public async Task CreateOrder_CallsInventoryService()
+    public async Task CreateOrder_SucceedsWhenStockAvailable()
     {
         using var context = CreateContext();
-        var inventoryClient = CreateMockInventoryClient(stockAvailable: true, deductSuccess: true);
+        var inventoryClient = CreateInventoryClient(stockAvailable: true, deductSucceeds: true);
         var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
+        var stockLevels = new Dictionary<int, int> { { product.Id, 100 } };
+        var inventoryClient = CreateInventoryClient(stockLevels);
+        var service = new OrderService(context, inventoryClient);
 
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
         Assert.NotNull(order);
         Assert.Single(order.Items);
+        Assert.Equal(product.Price * 5, order.TotalAmount);
     }
 
     [Fact]
     public async Task CreateOrder_ThrowsOnInsufficientStock()
     {
         using var context = CreateContext();
-        var inventoryClient = CreateMockInventoryClient(stockAvailable: false);
+        var inventoryClient = CreateInventoryClient(stockAvailable: false);
         var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
+        var stockLevels = new Dictionary<int, int> { { product.Id, 2 } };
+        var inventoryClient = CreateInventoryClient(stockLevels);
+        var service = new OrderService(context, inventoryClient);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 99999) }));
+    }
+}
+
+public class FakeInventoryHandler : HttpMessageHandler
+{
+    private readonly bool _stockAvailable;
+    private readonly bool _deductSucceeds;
+
+    public FakeInventoryHandler(bool stockAvailable = true, bool deductSucceeds = true)
+    {
+        _stockAvailable = stockAvailable;
+        _deductSucceeds = deductSucceeds;
+    }
+
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        var path = request.RequestUri?.PathAndQuery ?? "";
+
+        if (path.Contains("/check"))
+        {
+            var response = new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(new { productId = 1, quantity = 5, available = _stockAvailable })
+            };
+            return Task.FromResult(response);
+        }
+
+        if (path.Contains("/deduct"))
+        {
+            if (_deductSucceeds)
+            {
+                var response = new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = JsonContent.Create(new InventoryItemDto
+                    {
+                        Id = 1, ProductId = 1, ProductName = "Widget A",
+                        QuantityOnHand = 45, ReorderLevel = 10,
+                        WarehouseLocation = "A-01", LastRestocked = DateTime.UtcNow
+                    })
+                };
+                return Task.FromResult(response);
+            }
+            else
+            {
+                var response = new HttpResponseMessage(HttpStatusCode.Conflict)
+                {
+                    Content = JsonContent.Create(new { error = "Insufficient stock" })
+                };
+                return Task.FromResult(response);
+            }
+        }
+
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
     }
 }
