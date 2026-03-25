@@ -4,34 +4,34 @@ using OrderManager.Api.Services;
 namespace OrderManager.Api.Controllers;
 
 /// <summary>
-/// Inventory controller that proxies requests to the inventory microservice.
+/// Proxies inventory requests to the inventory-service microservice.
 /// Maintains backward-compatible API surface for existing Angular frontend.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class InventoryController : ControllerBase
 {
-    private readonly IInventoryServiceClient _inventoryService;
+    private readonly InventoryServiceClient _inventoryClient;
 
-    public InventoryController(IInventoryServiceClient inventoryService)
+    public InventoryController(InventoryServiceClient inventoryClient)
     {
-        _inventoryService = inventoryService;
+        _inventoryClient = inventoryClient;
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll() => Ok(await _inventoryService.GetAllInventoryAsync());
+    public async Task<IActionResult> GetAll() => Ok(await _inventoryClient.GetAllInventoryAsync());
 
     [HttpGet("product/{productId}")]
     public async Task<IActionResult> GetByProduct(int productId)
     {
-        var item = await _inventoryService.GetInventoryByProductIdAsync(productId);
+        var item = await _inventoryClient.GetInventoryByProductIdAsync(productId);
         return item is null ? NotFound() : Ok(item);
     }
 
     [HttpPost("product/{productId}/restock")]
     public async Task<IActionResult> Restock(int productId, [FromBody] RestockRequest request)
     {
-        var item = await _inventoryService.RestockAsync(productId, request.Quantity);
+        var item = await _inventoryClient.RestockAsync(productId, request.Quantity);
         return Ok(item);
     }
 
@@ -40,7 +40,7 @@ public class InventoryController : ControllerBase
     {
         try
         {
-            var item = await _inventoryService.DeductStockAsync(productId, request.Quantity);
+            var item = await _inventoryClient.DeductStockAsync(productId, request.Quantity);
             return Ok(item);
         }
         catch (InvalidOperationException ex)
@@ -50,8 +50,7 @@ public class InventoryController : ControllerBase
     }
 
     [HttpGet("low-stock")]
-    public async Task<IActionResult> GetLowStock() => Ok(await _inventoryService.GetLowStockItemsAsync());
+    public async Task<IActionResult> GetLowStock() => Ok(await _inventoryClient.GetLowStockItemsAsync());
 }
 
 public record RestockRequest(int Quantity);
-public record DeductRequest(int Quantity);
