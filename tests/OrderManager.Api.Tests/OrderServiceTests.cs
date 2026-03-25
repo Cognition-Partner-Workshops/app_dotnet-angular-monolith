@@ -1,43 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 using OrderManager.Api.Data;
 using OrderManager.Api.Services;
-using Xunit;
 
 namespace OrderManager.Api.Tests;
-
-/// <summary>
-/// Mock inventory service client that delegates to the local database
-/// for testing the OrderService after the inventory microservice extraction.
-/// </summary>
-public class MockInventoryServiceClient : IInventoryServiceClient
-{
-    private readonly AppDbContext _context;
-
-    public MockInventoryServiceClient(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    public async Task<InventoryStockLevel?> GetStockLevelAsync(int productId)
-    {
-        var item = await _context.InventoryItems.FirstOrDefaultAsync(i => i.ProductId == productId);
-        if (item == null) return null;
-        return new InventoryStockLevel(item.ProductId, item.QuantityOnHand);
-    }
-
-    public async Task<bool> DeductStockAsync(int productId, int quantity)
-    {
-        var item = await _context.InventoryItems.FirstOrDefaultAsync(i => i.ProductId == productId);
-        if (item == null || item.QuantityOnHand < quantity) return false;
-        item.QuantityOnHand -= quantity;
-        await _context.SaveChangesAsync();
-        return true;
-    }
-}
 
 public class OrderServiceTests
 {
