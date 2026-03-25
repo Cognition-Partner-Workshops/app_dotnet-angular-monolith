@@ -53,7 +53,7 @@ public class OrderServiceTests
 
         var inventoryClient = CreateMockInventoryClient(request =>
         {
-            if (request.RequestUri!.PathAndQuery.Contains($"/api/inventory/product/{product.Id}/decrement"))
+            if (request.RequestUri!.PathAndQuery.Contains($"/api/inventory/product/{product.Id}/deduct"))
             {
                 decrementCalled = true;
                 var item = new InventoryItem

@@ -38,7 +38,7 @@ public class InventoryHttpClient
     public async Task<InventoryItem> DecrementStockAsync(int productId, int quantity)
     {
         var response = await _httpClient.PostAsJsonAsync(
-            $"api/inventory/product/{productId}/decrement",
+            $"api/inventory/product/{productId}/deduct",
             new { Quantity = quantity });
 
         if (!response.IsSuccessStatusCode)
