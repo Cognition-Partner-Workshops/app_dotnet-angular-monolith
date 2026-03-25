@@ -43,10 +43,6 @@ public class InventoryController : ControllerBase
         {
             return Conflict(new { error = ex.Message });
         }
-        catch (HttpRequestException)
-        {
-            return StatusCode(502, new { error = "Inventory service unavailable" });
-        }
     }
 
     [HttpGet("low-stock")]
