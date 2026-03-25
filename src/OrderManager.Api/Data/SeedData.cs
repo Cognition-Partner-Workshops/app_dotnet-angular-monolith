@@ -28,8 +28,5 @@ public static class SeedData
         };
         context.Products.AddRange(products);
         context.SaveChanges();
-
-        // Inventory is now managed by the inventory-service microservice.
-        // Seed data for inventory lives in the inventory-service's own SeedData.
     }
 }
