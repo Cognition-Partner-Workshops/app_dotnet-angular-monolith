@@ -7,9 +7,9 @@ namespace OrderManager.Api.Controllers;
 [Route("api/[controller]")]
 public class InventoryController : ControllerBase
 {
-    private readonly IInventoryServiceClient _inventoryClient;
+    private readonly InventoryApiClient _inventoryClient;
 
-    public InventoryController(IInventoryServiceClient inventoryClient)
+    public InventoryController(InventoryApiClient inventoryClient)
     {
         _inventoryClient = inventoryClient;
     }
