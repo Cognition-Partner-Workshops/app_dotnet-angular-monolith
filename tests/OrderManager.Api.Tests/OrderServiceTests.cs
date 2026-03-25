@@ -21,12 +21,11 @@ public class OrderServiceTests
         return context;
     }
 
-    private static InventoryServiceClient CreateInventoryClient(bool stockAvailable = true)
+    private static InventoryApiClient CreateInventoryClient(bool stockAvailable = true)
     {
         var handler = new FakeInventoryHandler(stockAvailable);
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://fake-inventory") };
-        var logger = new Microsoft.Extensions.Logging.Abstractions.NullLogger<InventoryServiceClient>();
-        return new InventoryServiceClient(httpClient, logger);
+        return new InventoryApiClient(httpClient);
     }
 
     [Fact]
