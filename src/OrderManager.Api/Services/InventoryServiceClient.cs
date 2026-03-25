@@ -17,14 +17,14 @@ public class InventoryServiceClient
         _logger = logger;
     }
 
-    public async Task<List<InventoryItemDto>> GetAllInventoryAsync()
+    public virtual async Task<List<InventoryItemDto>> GetAllInventoryAsync()
     {
         _logger.LogInformation("Fetching all inventory from inventory-service");
         var items = await _httpClient.GetFromJsonAsync<List<InventoryItemDto>>("api/inventory");
         return items ?? new List<InventoryItemDto>();
     }
 
-    public async Task<InventoryItemDto?> GetInventoryByProductIdAsync(int productId)
+    public virtual async Task<InventoryItemDto?> GetInventoryByProductIdAsync(int productId)
     {
         _logger.LogInformation("Fetching inventory for product {ProductId}", productId);
         var response = await _httpClient.GetAsync($"api/inventory/product/{productId}");
@@ -34,7 +34,7 @@ public class InventoryServiceClient
         return await response.Content.ReadFromJsonAsync<InventoryItemDto>();
     }
 
-    public async Task<InventoryItemDto> RestockAsync(int productId, int quantity)
+    public virtual async Task<InventoryItemDto> RestockAsync(int productId, int quantity)
     {
         _logger.LogInformation("Restocking product {ProductId} with {Quantity}", productId, quantity);
         var response = await _httpClient.PostAsJsonAsync(
@@ -45,14 +45,14 @@ public class InventoryServiceClient
             ?? throw new InvalidOperationException("Restock returned null response");
     }
 
-    public async Task<List<InventoryItemDto>> GetLowStockItemsAsync()
+    public virtual async Task<List<InventoryItemDto>> GetLowStockItemsAsync()
     {
         _logger.LogInformation("Fetching low-stock items from inventory-service");
         var items = await _httpClient.GetFromJsonAsync<List<InventoryItemDto>>("api/inventory/low-stock");
         return items ?? new List<InventoryItemDto>();
     }
 
-    public async Task<InventoryItemDto?> DeductStockAsync(int productId, int quantity)
+    public virtual async Task<InventoryItemDto?> DeductStockAsync(int productId, int quantity)
     {
         _logger.LogInformation("Deducting {Quantity} from product {ProductId} via inventory-service", quantity, productId);
         var response = await _httpClient.PostAsJsonAsync(
