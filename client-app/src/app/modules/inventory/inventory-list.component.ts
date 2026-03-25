@@ -21,5 +21,8 @@ import { CommonModule } from '@angular/common';
 export class InventoryListComponent implements OnInit {
   items: any[] = [];
   constructor(private http: HttpClient) {}
-  ngOnInit() { this.http.get<any[]>('/api/inventory').subscribe(data => this.items = data); }
+  ngOnInit() {
+    // Inventory data now served via the monolith's proxy to the inventory microservice
+    this.http.get<any[]>('/api/inventory').subscribe(data => this.items = data);
+  }
 }
