@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Moq;
-using Moq.Protected;
+using Xunit;
+using Microsoft.EntityFrameworkCore;
 using OrderManager.Api.Data;
 using OrderManager.Api.Models;
 using OrderManager.Api.Services;
@@ -83,6 +84,7 @@ public class OrderServiceTests
         var inventoryClient = new InventoryHttpClient(httpClient);
         var service = new OrderService(context, inventoryClient);
 
+        var service = new OrderService(context, mockClient.Object);
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
         Assert.Single(order.Items);
