@@ -48,4 +48,19 @@ public class InventoryApiClient
         var response = await _httpClient.PostAsJsonAsync($"api/inventory/product/{productId}/deduct", new { Quantity = quantity });
         return response.IsSuccessStatusCode;
     }
+
+    public async Task<InventoryItem> DeductStockAsync(int productId, int quantity)
+    {
+        var response = await _httpClient.PostAsJsonAsync($"api/inventory/product/{productId}/deduct", new { Quantity = quantity });
+        if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+        {
+            var error = await response.Content.ReadAsStringAsync();
+            throw new InvalidOperationException($"Insufficient stock for product {productId}");
+        }
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            throw new ArgumentException($"No inventory record for product {productId}");
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<InventoryItem>()
+            ?? throw new InvalidOperationException("Failed to deserialize deduct response");
+    }
 }
