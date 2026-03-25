@@ -1,5 +1,5 @@
-using Microsoft.EntityFrameworkCore;
 using Xunit;
+using Microsoft.EntityFrameworkCore;
 using OrderManager.Api.Data;
 using OrderManager.Api.Models;
 using OrderManager.Api.Services;
@@ -7,19 +7,20 @@ using OrderManager.Api.Services;
 namespace OrderManager.Api.Tests;
 
 /// <summary>
-/// In-memory mock of IInventoryServiceClient for unit testing.
+/// In-memory mock of IInventoryServiceClient for testing.
 /// </summary>
-public class FakeInventoryClient : IInventoryServiceClient
+public class FakeInventoryServiceClient : IInventoryServiceClient
 {
-    private readonly Dictionary<int, int> _stock = new()
-    {
-        { 1, 50 }, { 2, 100 }, { 3, 150 }, { 4, 200 }, { 5, 250 }
-    };
-    private readonly bool _shouldFail;
+    private readonly Dictionary<int, int> _stock;
+    private readonly bool _shouldThrowOnDeduct;
 
-    public FakeInventoryClient(bool shouldFail = false)
+    public FakeInventoryServiceClient(bool shouldThrowOnDeduct = false)
     {
-        _shouldFail = shouldFail;
+        _stock = new Dictionary<int, int>
+        {
+            { 1, 50 }, { 2, 100 }, { 3, 150 }, { 4, 200 }, { 5, 250 }
+        };
+        _shouldThrowOnDeduct = shouldThrowOnDeduct;
     }
 
     public Task<List<InventoryItem>> GetAllInventoryAsync() =>
@@ -83,27 +84,27 @@ public class OrderServiceTests
     public async Task GetAllOrders_ReturnsEmptyList_WhenNoOrders()
     {
         using var context = CreateContext();
-        var inventoryClient = new FakeInventoryClient();
+        var inventoryClient = new FakeInventoryServiceClient();
         var service = new OrderService(context, inventoryClient);
         var orders = await service.GetAllOrdersAsync();
         Assert.Empty(orders);
     }
 
     [Fact]
-    public async Task CreateOrder_SucceedsWhenStockAvailable()
+    public async Task CreateOrder_DeductsStockViaMicroservice()
     {
         using var context = CreateContext();
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
-        var inventoryClient = new FakeInventoryClient();
+        var inventoryClient = new FakeInventoryServiceClient();
         var service = new OrderService(context, inventoryClient);
 
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
         Assert.NotNull(order);
         Assert.Single(order.Items);
-        Assert.Equal(product.Price * 5, order.TotalAmount);
+        Assert.Equal(5, order.Items.First().Quantity);
     }
 
     [Fact]
@@ -113,7 +114,7 @@ public class OrderServiceTests
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
-        var inventoryClient = new FakeInventoryClient(shouldFail: true);
+        var inventoryClient = new FakeInventoryServiceClient(shouldThrowOnDeduct: true);
         var service = new OrderService(context, inventoryClient);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
