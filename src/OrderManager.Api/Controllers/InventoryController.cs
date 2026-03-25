@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using OrderManager.Api.Services;
+using OrderManager.Api.Clients;
 
 namespace OrderManager.Api.Controllers;
 
