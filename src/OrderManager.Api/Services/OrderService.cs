@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using OrderManager.Api.Clients;
 using OrderManager.Api.Data;
 using OrderManager.Api.Models;
 
@@ -7,12 +8,12 @@ namespace OrderManager.Api.Services;
 public class OrderService
 {
     private readonly AppDbContext _context;
-    private readonly InventoryService _inventoryService;
+    private readonly IInventoryClient _inventoryClient;
 
-    public OrderService(AppDbContext context, InventoryService inventoryService)
+    public OrderService(AppDbContext context, IInventoryClient inventoryClient)
     {
         _context = context;
-        _inventoryService = inventoryService;
+        _inventoryClient = inventoryClient;
     }
 
     public async Task<List<Order>> GetAllOrdersAsync()
@@ -48,13 +49,11 @@ public class OrderService
             var product = await _context.Products.FindAsync(productId)
                 ?? throw new ArgumentException($"Product {productId} not found");
 
-            var available = await _inventoryService.CheckStockAsync(productId, quantity);
+            var available = await _inventoryClient.CheckStockAsync(productId, quantity);
             if (!available)
                 throw new InvalidOperationException($"Insufficient stock for {product.Name}");
 
-            var deducted = await _inventoryService.DeductStockAsync(productId, quantity);
-            if (deducted is null)
-                throw new InvalidOperationException($"Failed to deduct stock for {product.Name}");
+            await _inventoryClient.DeductStockAsync(productId, quantity);
 
             order.Items.Add(new OrderItem
             {
