@@ -1,89 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
-using Moq;
-using Moq.Protected;
 using OrderManager.Api.Data;
 using OrderManager.Api.Models;
 using OrderManager.Api.Services;
-using System.Net;
 using Xunit;
-using OrderManager.Api.Data;
-using OrderManager.Api.Services;
 
 namespace OrderManager.Api.Tests;
-
-public class FakeInventoryServiceClient : IInventoryServiceClient
-{
-    private readonly Dictionary<int, int> _stock = new();
-    private readonly bool _shouldFailReservation;
-
-    public FakeInventoryServiceClient(
-        Dictionary<int, int>? initialStock = null,
-        bool shouldFailReservation = false)
-    {
-        _stock = initialStock ?? new Dictionary<int, int>();
-        _shouldFailReservation = shouldFailReservation;
-    }
-
-    public Task<List<InventoryItemDto>> GetAllInventoryAsync() =>
-        Task.FromResult(_stock.Select(kvp => new InventoryItemDto
-        {
-            ProductId = kvp.Key,
-            QuantityOnHand = kvp.Value
-        }).ToList());
-
-    public Task<InventoryItemDto?> GetInventoryByProductIdAsync(int productId) =>
-        Task.FromResult(_stock.ContainsKey(productId)
-            ? new InventoryItemDto { ProductId = productId, QuantityOnHand = _stock[productId] }
-            : null);
-
-    public Task<InventoryItemDto> RestockAsync(int productId, int quantity)
-    {
-        _stock[productId] = _stock.GetValueOrDefault(productId) + quantity;
-        return Task.FromResult(new InventoryItemDto
-        {
-            ProductId = productId,
-            QuantityOnHand = _stock[productId]
-        });
-    }
-
-    public Task<List<InventoryItemDto>> GetLowStockItemsAsync() =>
-        Task.FromResult(new List<InventoryItemDto>());
-
-    public Task<StockReservationResponse> CheckAndReserveStockAsync(StockReservationRequest request)
-    {
-        if (_shouldFailReservation)
-        {
-            return Task.FromResult(new StockReservationResponse
-            {
-                Success = false,
-                Message = "Insufficient stock"
-            });
-        }
-
-        foreach (var item in request.Items)
-        {
-            if (!_stock.ContainsKey(item.ProductId) || _stock[item.ProductId] < item.Quantity)
-            {
-                return Task.FromResult(new StockReservationResponse
-                {
-                    Success = false,
-                    Message = $"Insufficient stock for product {item.ProductId}"
-                });
-            }
-        }
-
-        foreach (var item in request.Items)
-            _stock[item.ProductId] -= item.Quantity;
-
-        return Task.FromResult(new StockReservationResponse
-        {
-            Success = true,
-            Message = "Stock reserved successfully"
-        });
-    }
-}
 
 public class OrderServiceTests
 {
@@ -97,39 +20,33 @@ public class OrderServiceTests
         return context;
     }
 
-    private static InventoryApiClient CreateClient(HttpStatusCode statusCode = HttpStatusCode.OK)
+    private static InventoryHttpClient CreateInventoryClient(bool deductSucceeds = true)
     {
-        var mockHandler = new Mock<HttpMessageHandler>(MockBehavior.Loose);
-        mockHandler.Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(new HttpResponseMessage(statusCode));
-
-        var httpClient = new HttpClient(mockHandler.Object) { BaseAddress = new Uri("http://localhost:5100") };
-        return new InventoryApiClient(httpClient);
+        var handler = new FakeInventoryHandler(deductSucceeds);
+        var httpClient = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("http://fake-inventory-service")
+        };
+        return new InventoryHttpClient(httpClient);
     }
 
     [Fact]
     public async Task GetAllOrders_ReturnsEmptyList_WhenNoOrders()
     {
         using var context = CreateContext();
-        var client = CreateClient();
-        var service = new OrderService(context, client);
+        var service = new OrderService(context, CreateInventoryClient());
         var orders = await service.GetAllOrdersAsync();
         Assert.Empty(orders);
     }
 
     [Fact]
-    public async Task CreateOrder_SucceedsWhenStockAvailable()
+    public async Task CreateOrder_CallsInventoryServiceToDeductStock()
     {
         using var context = CreateContext();
+        var inventoryClient = CreateInventoryClient(deductSucceeds: true);
+        var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
-
-        var client = CreateClient(HttpStatusCode.OK);
-        var service = new OrderService(context, client);
 
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
@@ -139,32 +56,44 @@ public class OrderServiceTests
     }
 
     [Fact]
-    public async Task CreateOrder_ThrowsOnInsufficientStock()
+    public async Task CreateOrder_ThrowsWhenInventoryServiceReturnsConflict()
     {
         using var context = CreateContext();
+        var inventoryClient = CreateInventoryClient(deductSucceeds: false);
+        var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
-        var client = CreateClient(HttpStatusCode.Conflict);
-        var service = new OrderService(context, client);
-
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => service.CreateOrderAsync(
-                customer.Id, new List<(int, int)> { (product.Id, 99999) }));
+            () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 99999) }));
+    }
+}
+
+internal class FakeInventoryHandler : HttpMessageHandler
+{
+    private readonly bool _deductSucceeds;
+
+    public FakeInventoryHandler(bool deductSucceeds)
+    {
+        _deductSucceeds = deductSucceeds;
     }
 
-    [Fact]
-    public async Task CreateOrder_ThrowsWhenInsufficientStock()
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        using var context = CreateContext();
-        var product = await context.Products.FirstAsync();
-        var customer = await context.Customers.FirstAsync();
-        var inventoryClient = new FakeInventoryServiceClient(
-            new Dictionary<int, int> { { product.Id, 2 } });
-        var service = new OrderService(context, inventoryClient);
+        var path = request.RequestUri?.PathAndQuery ?? "";
 
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => service.CreateOrderAsync(
-                customer.Id, new List<(int, int)> { (product.Id, 99999) }));
+        if (path.Contains("/deduct"))
+        {
+            var status = _deductSucceeds ? HttpStatusCode.OK : HttpStatusCode.BadRequest;
+            var content = _deductSucceeds
+                ? JsonContent.Create(new { id = 1, productId = 1, quantityOnHand = 45 })
+                : JsonContent.Create(new { error = "Insufficient stock" });
+            return Task.FromResult(new HttpResponseMessage(status) { Content = content });
+        }
+
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = JsonContent.Create(new object[] { })
+        });
     }
 }

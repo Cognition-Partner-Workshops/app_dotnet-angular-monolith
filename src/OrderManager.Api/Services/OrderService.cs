@@ -7,9 +7,9 @@ namespace OrderManager.Api.Services;
 public class OrderService
 {
     private readonly AppDbContext _context;
-    private readonly InventoryApiClient _inventoryClient;
+    private readonly InventoryHttpClient _inventoryClient;
 
-    public OrderService(AppDbContext context, InventoryApiClient inventoryClient)
+    public OrderService(AppDbContext context, InventoryHttpClient inventoryClient)
     {
         _context = context;
         _inventoryClient = inventoryClient;
@@ -63,7 +63,6 @@ public class OrderService
         order.TotalAmount = order.Items.Sum(i => i.Quantity * i.UnitPrice);
         _context.Orders.Add(order);
         await _context.SaveChangesAsync();
-
         return order;
     }
 
