@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Xunit;
 using OrderManager.Api.Data;
 using OrderManager.Api.Models;
 using OrderManager.Api.Services;
@@ -21,7 +22,8 @@ public class OrderServiceTests
     public async Task GetAllOrders_ReturnsEmptyList_WhenNoOrders()
     {
         using var context = CreateContext();
-        var service = new OrderService(context);
+        var inventoryClient = new InventoryService(context);
+        var service = new OrderService(context, inventoryClient);
         var orders = await service.GetAllOrdersAsync();
         Assert.Empty(orders);
     }
@@ -30,7 +32,8 @@ public class OrderServiceTests
     public async Task CreateOrder_DeductsInventory()
     {
         using var context = CreateContext();
-        var service = new OrderService(context);
+        var inventoryClient = new InventoryService(context);
+        var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
         var inventoryBefore = await context.InventoryItems.FirstAsync(i => i.ProductId == product.Id);
@@ -46,7 +49,8 @@ public class OrderServiceTests
     public async Task CreateOrder_ThrowsOnInsufficientStock()
     {
         using var context = CreateContext();
-        var service = new OrderService(context);
+        var inventoryClient = new InventoryService(context);
+        var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 

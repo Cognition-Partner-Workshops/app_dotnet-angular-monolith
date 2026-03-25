@@ -4,7 +4,12 @@ using OrderManager.Api.Models;
 
 namespace OrderManager.Api.Services;
 
-public class InventoryService
+/// <summary>
+/// Local DB-backed inventory service — kept as a fallback.
+/// In production the monolith delegates to the inventory microservice
+/// via <see cref="InventoryServiceHttpClient"/>.
+/// </summary>
+public class InventoryService : IInventoryServiceClient
 {
     private readonly AppDbContext _context;
 
@@ -29,6 +34,19 @@ public class InventoryService
             ?? throw new ArgumentException($"No inventory record for product {productId}");
         item.QuantityOnHand += quantity;
         item.LastRestocked = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+        return item;
+    }
+
+    public async Task<InventoryItem> DeductStockAsync(int productId, int quantity)
+    {
+        var item = await _context.InventoryItems.FirstOrDefaultAsync(i => i.ProductId == productId)
+            ?? throw new ArgumentException($"No inventory record for product {productId}");
+
+        if (item.QuantityOnHand < quantity)
+            throw new InvalidOperationException($"Insufficient stock for product {productId}. Available: {item.QuantityOnHand}");
+
+        item.QuantityOnHand -= quantity;
         await _context.SaveChangesAsync();
         return item;
     }

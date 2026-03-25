@@ -10,7 +10,20 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<CustomerService>();
-builder.Services.AddScoped<InventoryService>();
+
+// Inventory service: use HTTP client when InventoryServiceUrl is configured, otherwise fall back to local DB
+var inventoryServiceUrl = builder.Configuration["InventoryServiceUrl"];
+if (!string.IsNullOrEmpty(inventoryServiceUrl))
+{
+    builder.Services.AddHttpClient<IInventoryServiceClient, InventoryServiceHttpClient>(client =>
+    {
+        client.BaseAddress = new Uri(inventoryServiceUrl);
+    });
+}
+else
+{
+    builder.Services.AddScoped<IInventoryServiceClient, InventoryService>();
+}
 
 builder.Services.AddControllers().AddJsonOptions(options =>
     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
@@ -19,6 +32,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
+
+builder.Services.AddHealthChecks();
 
 var app = builder.Build();
 
@@ -33,5 +48,6 @@ app.UseSwaggerUI();
 app.UseCors();
 app.UseStaticFiles();
 app.MapControllers();
+app.MapHealthChecks("/health");
 app.MapFallbackToFile("index.html");
 app.Run();
