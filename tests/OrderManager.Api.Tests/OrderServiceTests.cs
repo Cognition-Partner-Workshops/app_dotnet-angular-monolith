@@ -77,6 +77,8 @@ public class OrderServiceTests
 
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
+        Assert.Single(order.Items);
+        Assert.Equal(product.Price * 5, order.TotalAmount);
         var stockAvailable = await inventoryClient.CheckStockAsync(product.Id, 95);
         Assert.True(stockAvailable);
     }
@@ -87,7 +89,7 @@ public class OrderServiceTests
         using var context = CreateContext();
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
-        var inventoryClient = new FakeInventoryClient(new Dictionary<int, int> { { product.Id, 5 } });
+        var inventoryClient = new FakeInventoryClient(new Dictionary<int, int> { { product.Id, 2 } });
         var service = new OrderService(context, inventoryClient);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
