@@ -7,6 +7,44 @@ using Xunit;
 
 namespace OrderManager.Api.Tests;
 
+public class FakeInventoryClient : IInventoryClient
+{
+    private readonly Dictionary<int, int> _stock = new();
+
+    public FakeInventoryClient(Dictionary<int, int>? initialStock = null)
+    {
+        _stock = initialStock ?? new Dictionary<int, int>();
+    }
+
+    public Task<List<InventoryItemDto>> GetAllInventoryAsync() =>
+        Task.FromResult(_stock.Select(kvp => new InventoryItemDto { ProductId = kvp.Key, QuantityOnHand = kvp.Value }).ToList());
+
+    public Task<InventoryItemDto?> GetInventoryByProductIdAsync(int productId) =>
+        Task.FromResult(_stock.ContainsKey(productId)
+            ? new InventoryItemDto { ProductId = productId, QuantityOnHand = _stock[productId] }
+            : null);
+
+    public Task<InventoryItemDto> RestockAsync(int productId, int quantity)
+    {
+        _stock[productId] = _stock.GetValueOrDefault(productId) + quantity;
+        return Task.FromResult(new InventoryItemDto { ProductId = productId, QuantityOnHand = _stock[productId] });
+    }
+
+    public Task<List<InventoryItemDto>> GetLowStockItemsAsync() =>
+        Task.FromResult(new List<InventoryItemDto>());
+
+    public Task<bool> CheckStockAsync(int productId, int quantity) =>
+        Task.FromResult(_stock.ContainsKey(productId) && _stock[productId] >= quantity);
+
+    public Task<InventoryItemDto> DeductStockAsync(int productId, int quantity)
+    {
+        if (!_stock.ContainsKey(productId) || _stock[productId] < quantity)
+            throw new InvalidOperationException($"Insufficient stock for product {productId}");
+        _stock[productId] -= quantity;
+        return Task.FromResult(new InventoryItemDto { ProductId = productId, QuantityOnHand = _stock[productId] });
+    }
+}
+
 public class OrderServiceTests
 {
     private AppDbContext CreateContext()
@@ -53,7 +91,6 @@ public class OrderServiceTests
 
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
-        Assert.NotNull(order);
         Assert.Single(order.Items);
         Assert.Equal(product.Id, order.Items.First().ProductId);
         Assert.Equal(5, order.Items.First().Quantity);

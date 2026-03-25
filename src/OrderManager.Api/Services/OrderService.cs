@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using OrderManager.Api.Clients;
 using OrderManager.Api.Data;
 using OrderManager.Api.Models;
 
@@ -7,9 +8,9 @@ namespace OrderManager.Api.Services;
 public class OrderService
 {
     private readonly AppDbContext _context;
-    private readonly InventoryServiceClient _inventoryClient;
+    private readonly IInventoryClient _inventoryClient;
 
-    public OrderService(AppDbContext context, InventoryServiceClient inventoryClient)
+    public OrderService(AppDbContext context, IInventoryClient inventoryClient)
     {
         _context = context;
         _inventoryClient = inventoryClient;
@@ -37,33 +38,22 @@ public class OrderService
         var customer = await _context.Customers.FindAsync(customerId)
             ?? throw new ArgumentException($"Customer {customerId} not found");
 
-        // Reserve stock atomically via the inventory microservice
-        var reservationRequest = new StockReservationRequest
-        {
-            Items = items.Select(i => new StockReservationItem
-            {
-                ProductId = i.ProductId,
-                Quantity = i.Quantity
-            }).ToList()
-        };
-
-        var reservationResult = await _inventoryClient.CheckAndReserveStockAsync(reservationRequest);
-        if (!reservationResult.Success)
-        {
-            throw new InvalidOperationException($"Stock reservation failed: {reservationResult.Message}");
-        }
-
         var order = new Order
         {
             CustomerId = customerId,
             ShippingAddress = $"{customer.Address}, {customer.City}, {customer.State} {customer.ZipCode}"
         };
 
-        // Check stock availability via inventory-service before creating order
         foreach (var (productId, quantity) in items)
         {
             var product = await _context.Products.FindAsync(productId)
                 ?? throw new ArgumentException($"Product {productId} not found");
+
+            var available = await _inventoryClient.CheckStockAsync(productId, quantity);
+            if (!available)
+                throw new InvalidOperationException($"Insufficient stock for {product.Name}");
+
+            await _inventoryClient.DeductStockAsync(productId, quantity);
 
             order.Items.Add(new OrderItem
             {
