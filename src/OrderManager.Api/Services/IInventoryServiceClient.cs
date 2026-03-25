@@ -1,10 +1,7 @@
+using OrderManager.Api.Models;
+
 namespace OrderManager.Api.Services;
 
-/// <summary>
-/// Interface for inventory service client, enabling testability.
-/// The concrete implementation (InventoryServiceClient) makes HTTP calls
-/// to the standalone inventory microservice.
-/// </summary>
 public interface IInventoryServiceClient
 {
     Task<List<InventoryItemDto>> GetAllInventoryAsync();

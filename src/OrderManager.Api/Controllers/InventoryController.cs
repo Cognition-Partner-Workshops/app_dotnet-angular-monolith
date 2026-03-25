@@ -3,40 +3,54 @@ using OrderManager.Api.Services;
 
 namespace OrderManager.Api.Controllers;
 
-/// <summary>
-/// Inventory controller that proxies requests to the inventory microservice.
-/// Maintains backward-compatible API surface for existing Angular frontend.
-/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class InventoryController : ControllerBase
 {
-    private readonly InventoryServiceClient _inventoryClient;
+    private readonly IInventoryServiceClient _inventoryService;
 
-    public InventoryController(InventoryServiceClient inventoryClient)
+    public InventoryController(IInventoryServiceClient inventoryService)
     {
-        _inventoryClient = inventoryClient;
+        _inventoryService = inventoryService;
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll() => Ok(await _inventoryClient.GetAllInventoryAsync());
+    public async Task<IActionResult> GetAll() => Ok(await _inventoryService.GetAllInventoryAsync());
 
     [HttpGet("product/{productId}")]
     public async Task<IActionResult> GetByProduct(int productId)
     {
-        var item = await _inventoryClient.GetInventoryByProductIdAsync(productId);
+        var item = await _inventoryService.GetInventoryByProductIdAsync(productId);
         return item is null ? NotFound() : Ok(item);
     }
 
     [HttpPost("product/{productId}/restock")]
     public async Task<IActionResult> Restock(int productId, [FromBody] RestockRequest request)
     {
-        var item = await _inventoryClient.RestockAsync(productId, request.Quantity);
+        var item = await _inventoryService.RestockAsync(productId, request.Quantity);
         return Ok(item);
     }
 
+    [HttpPost("product/{productId}/deduct")]
+    public async Task<IActionResult> Deduct(int productId, [FromBody] DeductRequest request)
+    {
+        try
+        {
+            var item = await _inventoryService.DeductStockAsync(productId, request.Quantity);
+            return Ok(item);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { error = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+    }
+
     [HttpGet("low-stock")]
-    public async Task<IActionResult> GetLowStock() => Ok(await _inventoryClient.GetLowStockItemsAsync());
+    public async Task<IActionResult> GetLowStock() => Ok(await _inventoryService.GetLowStockItemsAsync());
 }
 
 public record RestockRequest(int Quantity);

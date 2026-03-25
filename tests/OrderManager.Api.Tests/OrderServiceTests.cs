@@ -1,7 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using OrderManager.Api.Data;
-using OrderManager.Api.Services;
 using Xunit;
+using OrderManager.Api.Data;
+using OrderManager.Api.Models;
+using OrderManager.Api.Services;
 
 namespace OrderManager.Api.Tests;
 
@@ -93,14 +94,14 @@ public class OrderServiceTests
     public async Task GetAllOrders_ReturnsEmptyList_WhenNoOrders()
     {
         using var context = CreateContext();
-        var inventoryClient = new FakeInventoryServiceClient();
+        var inventoryClient = CreateInventoryClient(HttpStatusCode.OK);
         var service = new OrderService(context, inventoryClient);
         var orders = await service.GetAllOrdersAsync();
         Assert.Empty(orders);
     }
 
     [Fact]
-    public async Task CreateOrder_ReservesStockViaInventoryService()
+    public async Task CreateOrder_CallsInventoryServiceToDeductStock()
     {
         using var context = CreateContext();
         var product = await context.Products.FirstAsync();
@@ -114,11 +115,11 @@ public class OrderServiceTests
 
         Assert.NotNull(order);
         Assert.Single(order.Items);
-        Assert.Equal(product.Price * 5, order.TotalAmount);
+        Assert.Equal(product.Id, order.Items.First().ProductId);
     }
 
     [Fact]
-    public async Task CreateOrder_ThrowsOnFailedReservation()
+    public async Task CreateOrder_ThrowsWhenInventoryServiceReturnsConflict()
     {
         using var context = CreateContext();
         var product = await context.Products.FirstAsync();

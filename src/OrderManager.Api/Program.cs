@@ -10,8 +10,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // Register HTTP client for the inventory microservice
 builder.Services.AddHttpClient<InventoryServiceClient>(client =>
 {
-    var baseUrl = builder.Configuration["InventoryService:BaseUrl"] ?? "http://localhost:5002";
-    client.BaseAddress = new Uri(baseUrl);
+    client.BaseAddress = new Uri(inventoryServiceUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 builder.Services.AddScoped<IInventoryServiceClient>(sp => sp.GetRequiredService<InventoryServiceClient>());
