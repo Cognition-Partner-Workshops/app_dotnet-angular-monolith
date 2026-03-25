@@ -1,5 +1,4 @@
 using System.Net.Http.Json;
-using OrderManager.Api.Models;
 
 namespace OrderManager.Api.Services;
 
@@ -55,10 +54,9 @@ public class InventoryApiClient
     {
         var response = await _httpClient.PostAsJsonAsync($"/api/inventory/product/{productId}/deduct", new { Quantity = quantity });
         if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
-        {
-            var error = await response.Content.ReadFromJsonAsync<ErrorResponse>();
-            throw new InvalidOperationException(error?.Error ?? "Insufficient stock");
-        }
+            throw new InvalidOperationException($"Insufficient stock for product {productId}");
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            throw new InvalidOperationException($"No inventory record for product {productId}");
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<InventoryItemDto>()
             ?? throw new InvalidOperationException("Failed to deserialize deduct response");
