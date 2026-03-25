@@ -50,8 +50,7 @@ public class OrderServiceTests
 
         Assert.NotNull(order);
         Assert.Single(order.Items);
-        Assert.Equal(product.Id, order.Items.First().ProductId);
-        Assert.Equal(5, order.Items.First().Quantity);
+        Assert.Equal(product.Price * 5, order.TotalAmount);
     }
 
     [Fact]

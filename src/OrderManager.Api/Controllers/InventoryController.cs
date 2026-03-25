@@ -4,8 +4,7 @@ using OrderManager.Api.Services;
 namespace OrderManager.Api.Controllers;
 
 /// <summary>
-/// Inventory controller that proxies requests to the inventory microservice.
-/// Maintains backward-compatible API surface for existing Angular frontend.
+/// Proxies inventory requests to the inventory-service microservice.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
@@ -35,6 +34,9 @@ public class InventoryController : ControllerBase
         return Ok(item);
     }
 
+    [HttpGet("low-stock")]
+    public async Task<IActionResult> GetLowStock() => Ok(await _inventoryClient.GetLowStockItemsAsync());
+
     [HttpPost("product/{productId}/deduct")]
     public async Task<IActionResult> Deduct(int productId, [FromBody] DeductRequest request)
     {
@@ -48,9 +50,6 @@ public class InventoryController : ControllerBase
             return Conflict(new { error = ex.Message });
         }
     }
-
-    [HttpGet("low-stock")]
-    public async Task<IActionResult> GetLowStock() => Ok(await _inventoryClient.GetLowStockItemsAsync());
 
     [HttpGet("product/{productId}/check")]
     public async Task<IActionResult> CheckStock(int productId, [FromQuery] int quantity = 1)
