@@ -11,27 +11,27 @@ namespace OrderManager.Api.Controllers;
 [Route("api/[controller]")]
 public class InventoryController : ControllerBase
 {
-    private readonly InventoryServiceClient _inventoryClient;
+    private readonly InventoryService _inventoryService;
 
-    public InventoryController(InventoryServiceClient inventoryClient)
+    public InventoryController(InventoryService inventoryService)
     {
-        _inventoryClient = inventoryClient;
+        _inventoryService = inventoryService;
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll() => Ok(await _inventoryClient.GetAllInventoryAsync());
+    public async Task<IActionResult> GetAll() => Ok(await _inventoryService.GetAllInventoryAsync());
 
     [HttpGet("product/{productId}")]
     public async Task<IActionResult> GetByProduct(int productId)
     {
-        var item = await _inventoryClient.GetInventoryByProductIdAsync(productId);
+        var item = await _inventoryService.GetInventoryByProductIdAsync(productId);
         return item is null ? NotFound() : Ok(item);
     }
 
     [HttpPost("product/{productId}/restock")]
     public async Task<IActionResult> Restock(int productId, [FromBody] RestockRequest request)
     {
-        var item = await _inventoryClient.RestockAsync(productId, request.Quantity);
+        var item = await _inventoryService.RestockAsync(productId, request.Quantity);
         return Ok(item);
     }
 
@@ -63,3 +63,4 @@ public class InventoryController : ControllerBase
 }
 
 public record RestockRequest(int Quantity);
+public record DeductRequest(int Quantity);
