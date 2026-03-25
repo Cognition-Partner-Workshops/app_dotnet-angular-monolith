@@ -12,7 +12,7 @@ public class OrderService
     public OrderService(AppDbContext context, InventoryServiceClient inventoryClient)
     {
         _context = context;
-        _inventoryClient = inventoryClient;
+        _inventoryService = inventoryService;
     }
 
     public async Task<List<Order>> GetAllOrdersAsync()
@@ -48,8 +48,11 @@ public class OrderService
             var product = await _context.Products.FindAsync(productId)
                 ?? throw new ArgumentException($"Product {productId} not found");
 
-            // Deduct stock via the inventory microservice (HTTP call)
-            await _inventoryClient.DeductStockAsync(productId, quantity);
+            var available = await _inventoryService.CheckStockAsync(productId, quantity);
+            if (!available)
+                throw new InvalidOperationException($"Insufficient stock for {product.Name}");
+
+            await _inventoryService.DeductStockAsync(productId, quantity);
 
             order.Items.Add(new OrderItem
             {
@@ -62,6 +65,7 @@ public class OrderService
         order.TotalAmount = order.Items.Sum(i => i.Quantity * i.UnitPrice);
         _context.Orders.Add(order);
         await _context.SaveChangesAsync();
+
         return order;
     }
 
