@@ -53,8 +53,6 @@ public class OrderServiceTests
     public async Task CreateOrder_DeductsStockViaMicroservice()
     {
         using var context = CreateContext();
-        var inventoryClient = new FakeInventoryServiceClient();
-        var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
@@ -69,8 +67,6 @@ public class OrderServiceTests
     public async Task CreateOrder_ThrowsOnInsufficientStock()
     {
         using var context = CreateContext();
-        var inventoryClient = new FakeInventoryServiceClient(defaultStock: 2);
-        var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
