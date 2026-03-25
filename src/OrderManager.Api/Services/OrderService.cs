@@ -12,7 +12,7 @@ public class OrderService
     public OrderService(AppDbContext context, InventoryService inventoryService)
     {
         _context = context;
-        _inventoryService = inventoryService;
+        _inventoryClient = inventoryClient;
     }
 
     public async Task<List<Order>> GetAllOrdersAsync()
