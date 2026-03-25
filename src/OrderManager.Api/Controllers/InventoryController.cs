@@ -1,46 +1,46 @@
 using Microsoft.AspNetCore.Mvc;
-using OrderManager.Api.Clients;
+using OrderManager.Api.Services;
 
 namespace OrderManager.Api.Controllers;
 
 /// <summary>
-/// Proxies inventory requests to the inventory-service microservice via InventoryService HTTP client.
+/// Proxies inventory requests to the inventory-service microservice via InventoryApiClient.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class InventoryController : ControllerBase
 {
-    private readonly InventoryServiceHttpClient _inventoryClient;
+    private readonly InventoryApiClient _inventoryApiClient;
 
-    public InventoryController(InventoryServiceHttpClient inventoryClient)
+    public InventoryController(InventoryApiClient inventoryApiClient)
     {
-        _inventoryClient = inventoryClient;
+        _inventoryApiClient = inventoryApiClient;
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll() => Ok(await _inventoryClient.GetAllInventoryAsync());
+    public async Task<IActionResult> GetAll() => Ok(await _inventoryApiClient.GetAllInventoryAsync());
 
     [HttpGet("product/{productId}")]
     public async Task<IActionResult> GetByProduct(int productId)
     {
-        var item = await _inventoryClient.GetInventoryByProductIdAsync(productId);
+        var item = await _inventoryApiClient.GetInventoryByProductIdAsync(productId);
         return item is null ? NotFound() : Ok(item);
     }
 
     [HttpPost("product/{productId}/restock")]
     public async Task<IActionResult> Restock(int productId, [FromBody] RestockRequest request)
     {
-        var item = await _inventoryClient.RestockAsync(productId, request.Quantity);
+        var item = await _inventoryApiClient.RestockAsync(productId, request.Quantity);
         return Ok(item);
     }
 
     [HttpGet("low-stock")]
-    public async Task<IActionResult> GetLowStock() => Ok(await _inventoryService.GetLowStockItemsAsync());
+    public async Task<IActionResult> GetLowStock() => Ok(await _inventoryApiClient.GetLowStockItemsAsync());
 
     [HttpGet("product/{productId}/check")]
     public async Task<IActionResult> CheckStock(int productId, [FromQuery] int quantity = 1)
     {
-        var available = await _inventoryService.CheckStockAsync(productId, quantity);
+        var available = await _inventoryApiClient.CheckStockAsync(productId, quantity);
         return Ok(new { productId, quantity, available });
     }
 
@@ -49,7 +49,7 @@ public class InventoryController : ControllerBase
     {
         try
         {
-            var item = await _inventoryService.DeductStockAsync(productId, request.Quantity);
+            var item = await _inventoryApiClient.DeductStockAsync(productId, request.Quantity);
             return Ok(item);
         }
         catch (HttpRequestException)

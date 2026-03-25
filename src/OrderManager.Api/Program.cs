@@ -7,11 +7,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=ordermanager.db"));
 
-// Register InventoryService as a typed HttpClient pointing to the inventory-service microservice
-var inventoryServiceUrl = builder.Configuration["InventoryServiceUrl"] ?? "http://localhost:5100";
-builder.Services.AddHttpClient<InventoryService>(client =>
+// Register InventoryApiClient as a typed HttpClient pointing to the inventory-service microservice
+builder.Services.AddHttpClient<InventoryApiClient>(client =>
 {
-    client.BaseAddress = new Uri(inventoryServiceUrl);
+    var baseUrl = builder.Configuration["InventoryServiceUrl"] ?? "http://localhost:5002";
+    client.BaseAddress = new Uri(baseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 

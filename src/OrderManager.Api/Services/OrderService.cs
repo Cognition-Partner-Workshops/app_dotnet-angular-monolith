@@ -7,12 +7,14 @@ namespace OrderManager.Api.Services;
 public class OrderService
 {
     private readonly AppDbContext _context;
-    private readonly InventoryService _inventoryService;
+    private readonly InventoryApiClient _inventoryApiClient;
+    private readonly ILogger<OrderService> _logger;
 
-    public OrderService(AppDbContext context, InventoryService inventoryService)
+    public OrderService(AppDbContext context, InventoryApiClient inventoryApiClient, ILogger<OrderService> logger)
     {
         _context = context;
-        _inventoryService = inventoryService;
+        _inventoryApiClient = inventoryApiClient;
+        _logger = logger;
     }
 
     public async Task<List<Order>> GetAllOrdersAsync()
@@ -49,7 +51,7 @@ public class OrderService
             var product = await _context.Products.FindAsync(productId)
                 ?? throw new ArgumentException($"Product {productId} not found");
 
-            var available = await _inventoryService.CheckStockAsync(productId, quantity);
+            var available = await _inventoryApiClient.CheckStockAsync(productId, quantity);
             if (!available)
                 throw new InvalidOperationException($"Insufficient stock for {product.Name}");
 
@@ -68,7 +70,8 @@ public class OrderService
         // Deduct stock via inventory-service after order is persisted
         foreach (var item in order.Items)
         {
-            await _inventoryService.DeductStockAsync(item.ProductId, item.Quantity);
+            await _inventoryApiClient.DeductStockAsync(item.ProductId, item.Quantity);
+            _logger.LogInformation("Deducted {Quantity} units of product {ProductId} via inventory service", item.Quantity, item.ProductId);
         }
 
         return order;
