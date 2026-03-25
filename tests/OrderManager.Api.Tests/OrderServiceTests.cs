@@ -1,3 +1,6 @@
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 using OrderManager.Api.Data;
@@ -72,11 +75,15 @@ public class OrderServiceTests
         var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
+        var stockLevels = new Dictionary<int, int> { { product.Id, 100 } };
+        var inventoryClient = CreateInventoryClient(stockLevels);
+        var service = new OrderService(context, inventoryClient);
 
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
         Assert.NotNull(order);
         Assert.Single(order.Items);
+        Assert.Equal(product.Id, order.Items.First().ProductId);
     }
 
     [Fact]
@@ -87,6 +94,9 @@ public class OrderServiceTests
         var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
+        var stockLevels = new Dictionary<int, int> { { product.Id, 2 } };
+        var inventoryClient = CreateInventoryClient(stockLevels);
+        var service = new OrderService(context, inventoryClient);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 99999) }));
