@@ -44,29 +44,51 @@ public class OrderService
             ShippingAddress = $"{customer.Address}, {customer.City}, {customer.State} {customer.ZipCode}"
         };
 
-        foreach (var (productId, quantity) in items)
+        var deductedItems = new List<(int ProductId, int Quantity)>();
+
+        try
         {
-            var product = await _context.Products.FindAsync(productId)
-                ?? throw new ArgumentException($"Product {productId} not found");
-
-            var available = await _inventoryClient.CheckStockAsync(productId, quantity);
-            if (!available)
-                throw new InvalidOperationException($"Insufficient stock for {product.Name}");
-
-            await _inventoryClient.DeductStockAsync(productId, quantity);
-
-            order.Items.Add(new OrderItem
+            foreach (var (productId, quantity) in items)
             {
-                ProductId = productId,
-                Quantity = quantity,
-                UnitPrice = product.Price
-            });
-        }
+                var product = await _context.Products.FindAsync(productId)
+                    ?? throw new ArgumentException($"Product {productId} not found");
 
-        order.TotalAmount = order.Items.Sum(i => i.Quantity * i.UnitPrice);
-        _context.Orders.Add(order);
-        await _context.SaveChangesAsync();
-        return order;
+                var available = await _inventoryClient.CheckStockAsync(productId, quantity);
+                if (!available)
+                    throw new InvalidOperationException($"Insufficient stock for {product.Name}");
+
+                await _inventoryClient.DeductStockAsync(productId, quantity);
+                deductedItems.Add((productId, quantity));
+
+                order.Items.Add(new OrderItem
+                {
+                    ProductId = productId,
+                    Quantity = quantity,
+                    UnitPrice = product.Price
+                });
+            }
+
+            order.TotalAmount = order.Items.Sum(i => i.Quantity * i.UnitPrice);
+            _context.Orders.Add(order);
+            await _context.SaveChangesAsync();
+            return order;
+        }
+        catch
+        {
+            foreach (var (productId, quantity) in deductedItems)
+            {
+                try
+                {
+                    await _inventoryClient.RestockAsync(productId, quantity);
+                }
+                catch
+                {
+                    // Best-effort compensation; log failures in production
+                }
+            }
+
+            throw;
+        }
     }
 
     public async Task<Order> UpdateOrderStatusAsync(int orderId, string status)
