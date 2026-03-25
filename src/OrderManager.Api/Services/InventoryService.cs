@@ -1,43 +1,37 @@
-using Microsoft.EntityFrameworkCore;
-using OrderManager.Api.Data;
 using OrderManager.Api.Models;
 
 namespace OrderManager.Api.Services;
 
+/// <summary>
+/// Inventory service that delegates to the standalone inventory microservice via HTTP.
+/// Maintains the same public API for backward compatibility with existing controllers.
+/// </summary>
 public class InventoryService
 {
-    private readonly AppDbContext _context;
+    private readonly InventoryServiceClient _client;
 
-    public InventoryService(AppDbContext context)
+    public InventoryService(InventoryServiceClient client)
     {
-        _context = context;
+        _client = client;
     }
 
-    public async Task<List<InventoryItem>> GetAllInventoryAsync()
+    public async Task<List<InventoryItemDto>> GetAllInventoryAsync()
     {
-        return await _context.InventoryItems.Include(i => i.Product).ToListAsync();
+        return await _client.GetAllInventoryAsync();
     }
 
-    public async Task<InventoryItem?> GetInventoryByProductIdAsync(int productId)
+    public async Task<InventoryItemDto?> GetInventoryByProductIdAsync(int productId)
     {
-        return await _context.InventoryItems.Include(i => i.Product).FirstOrDefaultAsync(i => i.ProductId == productId);
+        return await _client.GetInventoryByProductIdAsync(productId);
     }
 
-    public async Task<InventoryItem> RestockAsync(int productId, int quantity)
+    public async Task<InventoryItemDto> RestockAsync(int productId, int quantity)
     {
-        var item = await _context.InventoryItems.FirstOrDefaultAsync(i => i.ProductId == productId)
-            ?? throw new ArgumentException($"No inventory record for product {productId}");
-        item.QuantityOnHand += quantity;
-        item.LastRestocked = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
-        return item;
+        return await _client.RestockAsync(productId, quantity);
     }
 
-    public async Task<List<InventoryItem>> GetLowStockItemsAsync()
+    public async Task<List<InventoryItemDto>> GetLowStockItemsAsync()
     {
-        return await _context.InventoryItems
-            .Include(i => i.Product)
-            .Where(i => i.QuantityOnHand <= i.ReorderLevel)
-            .ToListAsync();
+        return await _client.GetLowStockItemsAsync();
     }
 }

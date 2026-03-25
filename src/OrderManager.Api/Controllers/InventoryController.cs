@@ -3,6 +3,10 @@ using OrderManager.Api.Services;
 
 namespace OrderManager.Api.Controllers;
 
+/// <summary>
+/// Inventory controller that proxies requests to the inventory microservice.
+/// Maintains backward-compatible API surface for existing Angular frontend.
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class InventoryController : ControllerBase
