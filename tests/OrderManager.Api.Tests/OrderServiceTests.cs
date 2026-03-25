@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using OrderManager.Api.Clients;
 using OrderManager.Api.Data;
 using OrderManager.Api.Services;
-using Xunit;
 
 namespace OrderManager.Api.Tests;
 
@@ -75,6 +74,28 @@ public class OrderServiceTests
         var inventoryClient = new FakeInventoryClient(new Dictionary<int, int> { { product.Id, 100 } });
         var service = new OrderService(context, inventoryClient);
 
+        var inventoryClient = CreateMockInventoryClient(request =>
+        {
+            if (request.RequestUri!.PathAndQuery.Contains($"/api/inventory/product/{product.Id}/deduct"))
+            {
+                var dto = new InventoryItemDto
+                {
+                    Id = 1,
+                    ProductId = product.Id,
+                    ProductName = product.Name,
+                    QuantityOnHand = 45,
+                    ReorderLevel = 10,
+                    WarehouseLocation = "A-01",
+                    LastRestocked = DateTime.UtcNow
+                };
+                var response = new HttpResponseMessage(HttpStatusCode.OK);
+                response.Content = JsonContent.Create(dto);
+                return response;
+            }
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        });
+
+        var service = new OrderService(context, inventoryClient);
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
         var stockAvailable = await inventoryClient.CheckStockAsync(product.Id, 95);
@@ -90,6 +111,18 @@ public class OrderServiceTests
         var inventoryClient = new FakeInventoryClient(new Dictionary<int, int> { { product.Id, 5 } });
         var service = new OrderService(context, inventoryClient);
 
+        var inventoryClient = CreateMockInventoryClient(request =>
+        {
+            if (request.RequestUri!.PathAndQuery.Contains("/deduct"))
+            {
+                var response = new HttpResponseMessage(HttpStatusCode.Conflict);
+                response.Content = JsonContent.Create(new { error = "Insufficient stock" });
+                return response;
+            }
+            return new HttpResponseMessage(HttpStatusCode.NotFound);
+        });
+
+        var service = new OrderService(context, inventoryClient);
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 99999) }));
     }
