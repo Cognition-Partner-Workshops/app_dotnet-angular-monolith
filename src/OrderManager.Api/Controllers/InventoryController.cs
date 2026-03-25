@@ -5,7 +5,6 @@ namespace OrderManager.Api.Controllers;
 
 /// <summary>
 /// Proxies inventory requests to the inventory-service microservice.
-/// Maintains backward-compatible API surface for existing Angular frontend.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]

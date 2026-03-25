@@ -1,12 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using Moq;
-using Moq.Protected;
-using Xunit;
 using OrderManager.Api.Data;
+using OrderManager.Api.Models;
 using OrderManager.Api.Services;
+using Xunit;
 
 namespace OrderManager.Api.Tests;
 
@@ -54,7 +53,7 @@ public class OrderServiceTests
     }
 
     [Fact]
-    public async Task CreateOrder_DeductsStockViaInventoryService()
+    public async Task CreateOrder_CallsInventoryService()
     {
         using var context = CreateContext();
         var product = await context.Products.FirstAsync();
@@ -75,13 +74,12 @@ public class OrderServiceTests
 
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
-        Assert.NotNull(order);
         Assert.Single(order.Items);
         Assert.Equal(product.Price * 5, order.TotalAmount);
     }
 
     [Fact]
-    public async Task CreateOrder_ThrowsOnInsufficientStock()
+    public async Task CreateOrder_ThrowsWhenInventoryServiceReturnsConflict()
     {
         using var context = CreateContext();
         var product = await context.Products.FirstAsync();
