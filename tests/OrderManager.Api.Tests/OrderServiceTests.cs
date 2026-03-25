@@ -1,5 +1,6 @@
 using Xunit;
 using Microsoft.EntityFrameworkCore;
+using Xunit;
 using OrderManager.Api.Data;
 using OrderManager.Api.Models;
 using OrderManager.Api.Services;
@@ -91,11 +92,9 @@ public class OrderServiceTests
     public async Task CreateOrder_DeductsStockViaMicroservice()
     {
         using var context = CreateContext();
+        var service = new OrderService(context, new FakeInventoryClient());
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
-
-        var inventoryClient = new FakeInventoryServiceClient();
-        var service = new OrderService(context, inventoryClient);
 
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
@@ -108,11 +107,9 @@ public class OrderServiceTests
     public async Task CreateOrder_ThrowsOnInsufficientStock()
     {
         using var context = CreateContext();
+        var service = new OrderService(context, new FakeInventoryClient(shouldFail: true));
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
-
-        var inventoryClient = new FakeInventoryServiceClient(shouldThrowOnDeduct: true);
-        var service = new OrderService(context, inventoryClient);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 99999) }));
