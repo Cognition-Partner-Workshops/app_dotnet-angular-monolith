@@ -22,7 +22,7 @@ public class OrderServiceTests
         return context;
     }
 
-    private static InventoryService CreateInventoryService(HttpStatusCode statusCode = HttpStatusCode.OK, string? jsonContent = null)
+    private static InventoryApiClient CreateInventoryApiClient(HttpStatusCode statusCode = HttpStatusCode.OK, string? jsonContent = null)
     {
         var mockHandler = new Mock<HttpMessageHandler>(MockBehavior.Loose);
         mockHandler.Protected()
@@ -39,15 +39,15 @@ public class OrderServiceTests
             });
 
         var httpClient = new HttpClient(mockHandler.Object) { BaseAddress = new Uri("http://localhost:5100") };
-        return new InventoryService(httpClient);
+        return new InventoryApiClient(httpClient);
     }
 
     [Fact]
     public async Task GetAllOrders_ReturnsEmptyList_WhenNoOrders()
     {
         using var context = CreateContext();
-        var inventoryService = CreateInventoryService();
-        var service = new OrderService(context, inventoryService);
+        var inventoryClient = CreateInventoryApiClient();
+        var service = new OrderService(context, inventoryClient);
         var orders = await service.GetAllOrdersAsync();
         Assert.Empty(orders);
     }
@@ -59,17 +59,8 @@ public class OrderServiceTests
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
-        var deductedItem = new InventoryItemDto
-        {
-            Id = 1,
-            ProductId = product.Id,
-            ProductName = product.Name,
-            QuantityOnHand = 95,
-            ReorderLevel = 10
-        };
-        var json = JsonSerializer.Serialize(deductedItem);
-        var inventoryService = CreateInventoryService(HttpStatusCode.OK, json);
-        var service = new OrderService(context, inventoryService);
+        var inventoryClient = CreateInventoryApiClient(HttpStatusCode.OK);
+        var service = new OrderService(context, inventoryClient);
 
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
@@ -85,8 +76,8 @@ public class OrderServiceTests
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
-        var inventoryService = CreateInventoryService(HttpStatusCode.Conflict);
-        var service = new OrderService(context, inventoryService);
+        var inventoryClient = CreateInventoryApiClient(HttpStatusCode.Conflict);
+        var service = new OrderService(context, inventoryClient);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 99999) }));
