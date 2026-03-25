@@ -1,6 +1,10 @@
-namespace OrderManager.Api.Clients;
+namespace OrderManager.Api.Services;
 
-public interface IInventoryClient
+/// <summary>
+/// Abstraction over inventory operations for testability.
+/// Implemented by InventoryService (HTTP client to inventory-service microservice).
+/// </summary>
+public interface IInventoryService
 {
     Task<List<InventoryItemDto>> GetAllInventoryAsync();
     Task<InventoryItemDto?> GetInventoryByProductIdAsync(int productId);
