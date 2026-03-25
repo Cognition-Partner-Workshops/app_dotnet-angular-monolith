@@ -68,7 +68,7 @@ public class InventoryHttpClient
         return await response.Content.ReadFromJsonAsync<InventoryItem>()
             ?? throw new InvalidOperationException("Failed to deserialize deduct response");
     }
-}
 
-internal record StockCheckResult(int ProductId, int Quantity, bool Available);
-internal record ErrorResponse(string Error);
+    private record StockCheckResult(int ProductId, int Quantity, bool Available);
+    private record ErrorResponse(string Error);
+}
