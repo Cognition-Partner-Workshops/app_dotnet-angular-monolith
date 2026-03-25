@@ -1,11 +1,7 @@
-using Microsoft.EntityFrameworkCore;
-using Moq;
-using Moq.Protected;
-using OrderManager.Api.Data;
-using OrderManager.Api.Models;
-using OrderManager.Api.Services;
 using System.Net;
-using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using OrderManager.Api.Data;
+using OrderManager.Api.Services;
 using Xunit;
 
 namespace OrderManager.Api.Tests;
@@ -22,32 +18,19 @@ public class OrderServiceTests
         return context;
     }
 
-    private static InventoryService CreateInventoryService(HttpStatusCode statusCode = HttpStatusCode.OK, string? json = null)
+    private static InventoryApiClient CreateInventoryClient(bool stockAvailable = true)
     {
-        var mockHandler = new Mock<HttpMessageHandler>(MockBehavior.Loose);
-        mockHandler.Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(() =>
-            {
-                var response = new HttpResponseMessage(statusCode);
-                if (jsonContent != null)
-                    response.Content = new StringContent(jsonContent, System.Text.Encoding.UTF8, "application/json");
-                return response;
-            });
-
-        var httpClient = new HttpClient(mockHandler.Object) { BaseAddress = new Uri("http://localhost:5100") };
-        return new InventoryService(httpClient);
+        var handler = new FakeInventoryHandler(stockAvailable);
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://fake-inventory") };
+        return new InventoryApiClient(httpClient);
     }
 
     [Fact]
     public async Task GetAllOrders_ReturnsEmptyList_WhenNoOrders()
     {
         using var context = CreateContext();
-        var inventoryService = CreateInventoryService();
-        var service = new OrderService(context, inventoryService);
+        var client = CreateInventoryClient();
+        var service = new OrderService(context, client);
         var orders = await service.GetAllOrdersAsync();
         Assert.Empty(orders);
     }
@@ -56,6 +39,8 @@ public class OrderServiceTests
     public async Task CreateOrder_DeductsStockViaMicroservice()
     {
         using var context = CreateContext();
+        var client = CreateInventoryClient(stockAvailable: true);
+        var service = new OrderService(context, client);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
@@ -69,10 +54,31 @@ public class OrderServiceTests
     public async Task CreateOrder_ThrowsWhenInventoryServiceReturnsConflict()
     {
         using var context = CreateContext();
+        var client = CreateInventoryClient(stockAvailable: false);
+        var service = new OrderService(context, client);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
-        await Assert.ThrowsAsync<HttpRequestException>(
+        await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 99999) }));
+    }
+}
+
+public class FakeInventoryHandler : HttpMessageHandler
+{
+    private readonly bool _stockAvailable;
+
+    public FakeInventoryHandler(bool stockAvailable = true)
+    {
+        _stockAvailable = stockAvailable;
+    }
+
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        // CheckAndDeductStockAsync POSTs to /deduct and checks IsSuccessStatusCode
+        if (_stockAvailable)
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Conflict));
     }
 }

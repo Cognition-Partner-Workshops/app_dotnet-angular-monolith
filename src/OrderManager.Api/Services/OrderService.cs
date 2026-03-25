@@ -7,9 +7,9 @@ namespace OrderManager.Api.Services;
 public class OrderService
 {
     private readonly AppDbContext _context;
-    private readonly InventoryService _inventoryService;
+    private readonly InventoryApiClient _inventoryClient;
 
-    public OrderService(AppDbContext context, InventoryService inventoryService)
+    public OrderService(AppDbContext context, InventoryApiClient inventoryClient)
     {
         _context = context;
         _inventoryClient = inventoryClient;
@@ -49,7 +49,9 @@ public class OrderService
                 ?? throw new ArgumentException($"Product {productId} not found");
 
             // Deduct stock via the inventory microservice HTTP API
-            await _inventoryService.DeductStockAsync(productId, quantity);
+            var success = await _inventoryClient.CheckAndDeductStockAsync(productId, quantity);
+            if (!success)
+                throw new InvalidOperationException($"Insufficient stock for product {productId}");
 
             order.Items.Add(new OrderItem
             {
