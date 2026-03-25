@@ -31,7 +31,7 @@ public class OrderServiceTests
     }
 
     [Fact]
-    public async Task CreateOrder_DeductsStockViaMicroservice()
+    public async Task CreateOrder_DeductsStockViaInventoryService()
     {
         using var context = CreateContext();
         var product = await context.Products.FirstAsync();
@@ -68,5 +68,18 @@ public class OrderServiceTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 99999) }));
+    }
+
+    [Fact]
+    public async Task CreateOrder_ThrowsWhenProductNotInInventory()
+    {
+        using var context = CreateContext();
+        var inventoryClient = new FakeInventoryServiceClient(new Dictionary<int, int>());
+        var service = new OrderService(context, inventoryClient);
+        var product = await context.Products.FirstAsync();
+        var customer = await context.Customers.FirstAsync();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 1) }));
     }
 }
