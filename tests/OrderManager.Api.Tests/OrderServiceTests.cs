@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
-using Microsoft.EntityFrameworkCore;
 using OrderManager.Api.Data;
 using OrderManager.Api.Models;
 using OrderManager.Api.Services;
@@ -74,12 +73,16 @@ public class OrderServiceTests
     public async Task CreateOrder_ThrowsWhenProductNotInInventory()
     {
         using var context = CreateContext();
-        var inventoryClient = new FakeInventoryServiceClient(new Dictionary<int, int>());
-        var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
-        await Assert.ThrowsAsync<InvalidOperationException>(
+        var mockClient = new Mock<IInventoryServiceClient>();
+        mockClient.Setup(c => c.DeductStockAsync(product.Id, 1))
+            .ThrowsAsync(new ArgumentException($"No inventory record for product {product.Id}"));
+
+        var service = new OrderService(context, mockClient.Object);
+
+        await Assert.ThrowsAsync<ArgumentException>(
             () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 1) }));
     }
 }
