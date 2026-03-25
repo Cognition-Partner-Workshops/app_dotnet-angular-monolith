@@ -7,20 +7,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=ordermanager.db"));
 
+builder.Services.AddHttpClient<InventoryHttpClient>(client =>
+{
+    var baseUrl = builder.Configuration["InventoryService:BaseUrl"] ?? "http://localhost:5199";
+    client.BaseAddress = new Uri(baseUrl);
+});
+
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<CustomerService>();
-
-var inventoryServiceUrl = builder.Configuration.GetValue<string>("InventoryService:BaseUrl");
-if (!string.IsNullOrEmpty(inventoryServiceUrl))
-{
-    builder.Services.AddHttpClient<IInventoryService, InventoryHttpClient>(client =>
-        client.BaseAddress = new Uri(inventoryServiceUrl));
-}
-else
-{
-    builder.Services.AddScoped<IInventoryService, InventoryService>();
-}
 
 builder.Services.AddControllers().AddJsonOptions(options =>
     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);
