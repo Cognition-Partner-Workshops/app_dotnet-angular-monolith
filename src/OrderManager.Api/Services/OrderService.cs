@@ -52,6 +52,10 @@ public class OrderService
             // Deduct stock via the Inventory microservice instead of direct DB access
             await _inventoryClient.DeductStockAsync(productId, quantity);
 
+            var deducted = await _inventoryClient.DeductStockAsync(productId, quantity);
+            if (deducted is null)
+                throw new InvalidOperationException($"Failed to deduct stock for {product.Name}");
+
             order.Items.Add(new OrderItem
             {
                 ProductId = productId,
