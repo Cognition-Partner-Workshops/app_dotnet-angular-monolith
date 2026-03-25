@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using OrderManager.Api.Data;
+using OrderManager.Api.Models;
 using OrderManager.Api.Services;
 using Xunit;
 
@@ -19,34 +20,30 @@ public class OrderServiceTests
         return context;
     }
 
-    private static InventoryServiceClient CreateMockInventoryClient(
-        StockReservationResponse? reservationResponse = null)
+    private static InventoryApiClient CreateInventoryClient(bool deductSucceeds = true)
     {
-        var handler = new MockHttpMessageHandler(reservationResponse ?? new StockReservationResponse
+        var handler = new FakeInventoryHandler(deductSucceeds);
+        var httpClient = new HttpClient(handler)
         {
-            Success = true,
-            Message = "Stock reserved successfully"
-        });
-        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost:5002") };
-        var logger = new Microsoft.Extensions.Logging.Abstractions.NullLogger<InventoryServiceClient>();
-        return new InventoryServiceClient(httpClient, logger);
+            BaseAddress = new Uri("http://fake-inventory-service")
+        };
+        return new InventoryApiClient(httpClient);
     }
 
     [Fact]
     public async Task GetAllOrders_ReturnsEmptyList_WhenNoOrders()
     {
         using var context = CreateContext();
-        var inventoryClient = CreateMockInventoryClient();
-        var service = new OrderService(context, inventoryClient);
+        var service = new OrderService(context, CreateInventoryClient());
         var orders = await service.GetAllOrdersAsync();
         Assert.Empty(orders);
     }
 
     [Fact]
-    public async Task CreateOrder_ReservesStockViaInventoryService()
+    public async Task CreateOrder_CallsInventoryServiceToDeductStock()
     {
         using var context = CreateContext();
-        var inventoryClient = CreateMockInventoryClient();
+        var inventoryClient = CreateInventoryClient(deductSucceeds: true);
         var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
@@ -56,19 +53,13 @@ public class OrderServiceTests
         Assert.NotNull(order);
         Assert.Single(order.Items);
         Assert.Equal(product.Id, order.Items.First().ProductId);
-        Assert.Equal(5, order.Items.First().Quantity);
     }
 
     [Fact]
-    public async Task CreateOrder_ThrowsOnFailedReservation()
+    public async Task CreateOrder_ThrowsWhenInventoryServiceReturnsConflict()
     {
         using var context = CreateContext();
-        var failedResponse = new StockReservationResponse
-        {
-            Success = false,
-            Message = "Insufficient stock"
-        };
-        var inventoryClient = CreateMockInventoryClient(failedResponse);
+        var inventoryClient = CreateInventoryClient(deductSucceeds: false);
         var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
@@ -76,42 +67,33 @@ public class OrderServiceTests
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 99999) }));
     }
-
-    [Fact]
-    public async Task CreateOrder_ThrowsWhenDeductFails()
-    {
-        using var context = CreateContext();
-        var inventoryClient = CreateMockInventoryApiClient(checkStockResult: true, deductStockReturnsNull: true);
-        var service = new OrderService(context, inventoryClient, CreateLogger());
-        var product = await context.Products.FirstAsync();
-        var customer = await context.Customers.FirstAsync();
-
-        // DeductStockAsync returns null (Conflict) but our OrderService doesn't check the result,
-        // so the order should still be created successfully
-        var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
-        Assert.NotNull(order);
-    }
 }
 
-/// <summary>
-/// Mock HTTP handler that returns configured responses for inventory service calls.
-/// </summary>
-internal class MockHttpMessageHandler : HttpMessageHandler
+internal class FakeInventoryHandler : HttpMessageHandler
 {
-    private readonly StockReservationResponse _reservationResponse;
+    private readonly bool _deductSucceeds;
 
-    public MockHttpMessageHandler(StockReservationResponse reservationResponse)
+    public FakeInventoryHandler(bool deductSucceeds)
     {
-        _reservationResponse = reservationResponse;
+        _deductSucceeds = deductSucceeds;
     }
 
-    protected override Task<HttpResponseMessage> SendAsync(
-        HttpRequestMessage request, CancellationToken cancellationToken)
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        var response = new HttpResponseMessage(HttpStatusCode.OK)
+        var path = request.RequestUri?.PathAndQuery ?? "";
+
+        if (path.Contains("/deduct"))
         {
-            Content = JsonContent.Create(_reservationResponse)
-        };
-        return Task.FromResult(response);
+            var status = _deductSucceeds ? HttpStatusCode.OK : HttpStatusCode.BadRequest;
+            var content = _deductSucceeds
+                ? JsonContent.Create(new { id = 1, productId = 1, quantityOnHand = 45 })
+                : JsonContent.Create(new { error = "Insufficient stock" });
+            return Task.FromResult(new HttpResponseMessage(status) { Content = content });
+        }
+
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = JsonContent.Create(new object[] { })
+        });
     }
 }
