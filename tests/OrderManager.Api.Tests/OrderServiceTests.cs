@@ -1,6 +1,3 @@
-using System.Net;
-using System.Net.Http.Json;
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 using OrderManager.Api.Data;
@@ -10,20 +7,19 @@ using OrderManager.Api.Services;
 namespace OrderManager.Api.Tests;
 
 /// <summary>
-/// In-memory mock of IInventoryServiceClient for testing.
+/// In-memory mock of IInventoryServiceClient for unit testing.
 /// </summary>
-public class FakeInventoryServiceClient : IInventoryServiceClient
+public class FakeInventoryClient : IInventoryServiceClient
 {
-    private readonly Dictionary<int, int> _stock;
-    private readonly bool _shouldThrowOnDeduct;
-
-    public FakeInventoryServiceClient(bool shouldThrowOnDeduct = false)
+    private readonly Dictionary<int, int> _stock = new()
     {
-        _stock = new Dictionary<int, int>
-        {
-            { 1, 50 }, { 2, 100 }, { 3, 150 }, { 4, 200 }, { 5, 250 }
-        };
-        _shouldThrowOnDeduct = shouldThrowOnDeduct;
+        { 1, 50 }, { 2, 100 }, { 3, 150 }, { 4, 200 }, { 5, 250 }
+    };
+    private readonly bool _shouldFail;
+
+    public FakeInventoryClient(bool shouldFail = false)
+    {
+        _shouldFail = shouldFail;
     }
 
     public Task<List<InventoryItem>> GetAllInventoryAsync() =>
@@ -50,7 +46,7 @@ public class FakeInventoryServiceClient : IInventoryServiceClient
 
     public Task<InventoryItem> DeductStockAsync(int productId, int quantity)
     {
-        if (_shouldThrowOnDeduct)
+        if (_shouldFail)
             throw new InvalidOperationException($"Insufficient stock for product {productId}");
 
         if (!_stock.ContainsKey(productId))
@@ -87,74 +83,40 @@ public class OrderServiceTests
     public async Task GetAllOrders_ReturnsEmptyList_WhenNoOrders()
     {
         using var context = CreateContext();
-        var inventoryClient = new FakeInventoryServiceClient();
+        var inventoryClient = new FakeInventoryClient();
         var service = new OrderService(context, inventoryClient);
         var orders = await service.GetAllOrdersAsync();
         Assert.Empty(orders);
     }
 
     [Fact]
-    public async Task CreateOrder_CallsInventoryServiceToDeductStock()
+    public async Task CreateOrder_SucceedsWhenStockAvailable()
     {
         using var context = CreateContext();
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
-        var deductResponse = new InventoryItem
-        {
-            Id = 1,
-            ProductId = product.Id,
-            ProductName = product.Name,
-            QuantityOnHand = 45,
-            ReorderLevel = 10,
-            WarehouseLocation = "A-01"
-        };
-        var inventoryClient = new FakeInventoryServiceClient();
+        var inventoryClient = new FakeInventoryClient();
         var service = new OrderService(context, inventoryClient);
 
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
         Assert.NotNull(order);
         Assert.Single(order.Items);
-        Assert.Equal(product.Id, order.Items.First().ProductId);
+        Assert.Equal(product.Price * 5, order.TotalAmount);
     }
 
     [Fact]
-    public async Task CreateOrder_ThrowsWhenInventoryServiceReturnsConflict()
+    public async Task CreateOrder_ThrowsOnInsufficientStock()
     {
         using var context = CreateContext();
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
-        var inventoryClient = new FakeInventoryServiceClient(shouldThrowOnDeduct: true);
+        var inventoryClient = new FakeInventoryClient(shouldFail: true);
         var service = new OrderService(context, inventoryClient);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 99999) }));
-    }
-}
-
-internal class FakeHttpMessageHandler : HttpMessageHandler
-{
-    private readonly HttpStatusCode _statusCode;
-    private readonly object? _responseBody;
-
-    public FakeHttpMessageHandler(HttpStatusCode statusCode, object? responseBody = null)
-    {
-        _statusCode = statusCode;
-        _responseBody = responseBody;
-    }
-
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-    {
-        var response = new HttpResponseMessage(_statusCode);
-        if (_responseBody != null)
-        {
-            response.Content = new StringContent(
-                JsonSerializer.Serialize(_responseBody),
-                System.Text.Encoding.UTF8,
-                "application/json");
-        }
-        return Task.FromResult(response);
     }
 }
