@@ -7,25 +7,17 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=ordermanager.db"));
 
-var inventoryServiceUrl = builder.Configuration["Services:InventoryService:BaseUrl"] ?? "http://localhost:5100";
-builder.Services.AddHttpClient<InventoryHttpClient>(client =>
+// Register inventory service HTTP client pointing to the inventory microservice
+var inventoryServiceUrl = builder.Configuration["InventoryServiceUrl"] ?? "http://localhost:5100";
+builder.Services.AddHttpClient<IInventoryServiceClient, InventoryServiceClient>(client =>
 {
     client.BaseAddress = new Uri(inventoryServiceUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
 });
-builder.Services.AddScoped<IInventoryServiceClient>(sp => sp.GetRequiredService<InventoryHttpClient>());
 
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<CustomerService>();
-
-// Register inventory service HTTP client pointing to the inventory microservice
-var inventoryServiceUrl = builder.Configuration["InventoryService:BaseUrl"] ?? "http://localhost:5100";
-
-builder.Services.AddHttpClient<IInventoryServiceClient, InventoryServiceHttpClient>(client =>
-{
-    client.BaseAddress = new Uri(inventoryServiceUrl);
-});
 
 builder.Services.AddControllers().AddJsonOptions(options =>
     options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles);

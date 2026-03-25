@@ -1,9 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
-using Microsoft.EntityFrameworkCore;
 using OrderManager.Api.Data;
-using OrderManager.Api.Models;
 using OrderManager.Api.Services;
 
 namespace OrderManager.Api.Tests;
@@ -39,7 +37,7 @@ public class OrderServiceTests
 
         var mockClient = new Mock<IInventoryServiceClient>();
         mockClient.Setup(c => c.DeductStockAsync(product.Id, 5))
-            .ReturnsAsync(new InventoryItem
+            .ReturnsAsync(new InventoryItemDto
             {
                 Id = 1, ProductId = product.Id, ProductName = product.Name,
                 QuantityOnHand = 45, ReorderLevel = 10, WarehouseLocation = "A-01"
@@ -71,13 +69,17 @@ public class OrderServiceTests
     }
 
     [Fact]
-    public async Task CreateOrder_ThrowsWhenProductNotInInventory()
+    public async Task CreateOrder_ThrowsWhenDeductReturnsNull()
     {
         using var context = CreateContext();
-        var inventoryClient = new FakeInventoryServiceClient(new Dictionary<int, int>());
-        var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
+
+        var mockClient = new Mock<IInventoryServiceClient>();
+        mockClient.Setup(c => c.DeductStockAsync(product.Id, 1))
+            .ReturnsAsync((InventoryItemDto?)null);
+
+        var service = new OrderService(context, mockClient.Object);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 1) }));
