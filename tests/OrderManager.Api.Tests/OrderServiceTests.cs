@@ -4,7 +4,6 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 using OrderManager.Api.Data;
-using OrderManager.Api.Models;
 using OrderManager.Api.Services;
 
 namespace OrderManager.Api.Tests;
@@ -45,7 +44,7 @@ public class OrderServiceTests
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
-        var mockItem = new InventoryItem
+        var mockItem = new InventoryItemDto
         {
             Id = 1, ProductId = product.Id, QuantityOnHand = 45,
             ReorderLevel = 10, WarehouseLocation = "A-01"
