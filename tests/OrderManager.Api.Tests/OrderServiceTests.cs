@@ -1,47 +1,47 @@
-using System.Net;
 using Microsoft.EntityFrameworkCore;
+using OrderManager.Api.Clients;
 using OrderManager.Api.Data;
 using OrderManager.Api.Services;
 using Xunit;
 
 namespace OrderManager.Api.Tests;
 
-/// <summary>
-/// In-memory fake that implements IInventoryServiceClient for unit tests.
-/// </summary>
-public class FakeInventoryServiceClient : IInventoryServiceClient
+public class FakeInventoryClient : IInventoryClient
 {
-    private readonly Dictionary<int, int> _stock = new()
+    private readonly Dictionary<int, int> _stock = new();
+
+    public FakeInventoryClient(Dictionary<int, int>? initialStock = null)
     {
-        { 1, 50 }, { 2, 100 }, { 3, 150 }, { 4, 200 }, { 5, 250 }
-    };
+        _stock = initialStock ?? new Dictionary<int, int>();
+    }
 
-    public Task<List<InventoryDto>> GetAllInventoryAsync() =>
-        Task.FromResult(_stock.Select(kv => new InventoryDto { ProductId = kv.Key, QuantityOnHand = kv.Value }).ToList());
+    public Task<List<InventoryItemDto>> GetAllInventoryAsync() =>
+        Task.FromResult(_stock.Select(kvp => new InventoryItemDto { ProductId = kvp.Key, QuantityOnHand = kvp.Value }).ToList());
 
-    public Task<InventoryDto?> GetInventoryByProductIdAsync(int productId) =>
+    public Task<InventoryItemDto?> GetInventoryByProductIdAsync(int productId) =>
         Task.FromResult(_stock.ContainsKey(productId)
-            ? new InventoryDto { ProductId = productId, QuantityOnHand = _stock[productId] }
+            ? new InventoryItemDto { ProductId = productId, QuantityOnHand = _stock[productId] }
             : null);
 
-    public Task<InventoryDto> RestockAsync(int productId, int quantity)
+    public Task<InventoryItemDto> RestockAsync(int productId, int quantity)
     {
-        if (_stock.ContainsKey(productId)) _stock[productId] += quantity;
-        return Task.FromResult(new InventoryDto { ProductId = productId, QuantityOnHand = _stock.GetValueOrDefault(productId) });
+        _stock[productId] = _stock.GetValueOrDefault(productId) + quantity;
+        return Task.FromResult(new InventoryItemDto { ProductId = productId, QuantityOnHand = _stock[productId] });
     }
 
-    public Task<InventoryDto> DeductStockAsync(int productId, int quantity)
+    public Task<List<InventoryItemDto>> GetLowStockItemsAsync() =>
+        Task.FromResult(new List<InventoryItemDto>());
+
+    public Task<bool> CheckStockAsync(int productId, int quantity) =>
+        Task.FromResult(_stock.ContainsKey(productId) && _stock[productId] >= quantity);
+
+    public Task<InventoryItemDto> DeductStockAsync(int productId, int quantity)
     {
-        if (!_stock.ContainsKey(productId))
-            throw new InvalidOperationException($"No inventory record for product {productId}");
-        if (_stock[productId] < quantity)
+        if (!_stock.ContainsKey(productId) || _stock[productId] < quantity)
             throw new InvalidOperationException($"Insufficient stock for product {productId}");
         _stock[productId] -= quantity;
-        return Task.FromResult(new InventoryDto { ProductId = productId, QuantityOnHand = _stock[productId] });
+        return Task.FromResult(new InventoryItemDto { ProductId = productId, QuantityOnHand = _stock[productId] });
     }
-
-    public Task<List<InventoryDto>> GetLowStockItemsAsync() =>
-        Task.FromResult(new List<InventoryDto>());
 }
 
 public class OrderServiceTests
@@ -60,38 +60,52 @@ public class OrderServiceTests
     public async Task GetAllOrders_ReturnsEmptyList_WhenNoOrders()
     {
         using var context = CreateContext();
-        var inventoryClient = new FakeInventoryServiceClient();
+        var inventoryClient = new FakeInventoryClient();
         var service = new OrderService(context, inventoryClient);
         var orders = await service.GetAllOrdersAsync();
         Assert.Empty(orders);
     }
 
     [Fact]
-    public async Task CreateOrder_DeductsStockViaMicroservice()
+    public async Task CreateOrder_CallsInventoryServiceToDeductStock()
     {
         using var context = CreateContext();
-        var inventoryClient = new FakeInventoryServiceClient();
-        var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
+        var inventoryClient = new FakeInventoryClient(new Dictionary<int, int> { { product.Id, 100 } });
+        var service = new OrderService(context, inventoryClient);
 
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
-        Assert.NotNull(order);
         Assert.Single(order.Items);
-        Assert.Equal(5, order.Items.First().Quantity);
+        Assert.Equal(product.Price * 5, order.TotalAmount);
+        var stockAvailable = await inventoryClient.CheckStockAsync(product.Id, 95);
+        Assert.True(stockAvailable);
     }
 
     [Fact]
     public async Task CreateOrder_ThrowsOnInsufficientStock()
     {
         using var context = CreateContext();
-        var inventoryClient = new FakeInventoryServiceClient();
+        var product = await context.Products.FirstAsync();
+        var customer = await context.Customers.FirstAsync();
+        var inventoryClient = new FakeInventoryClient(new Dictionary<int, int> { { product.Id, 2 } });
+        var service = new OrderService(context, inventoryClient);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 99999) }));
+    }
+
+    [Fact]
+    public async Task CreateOrder_ThrowsWhenProductNotInInventory()
+    {
+        using var context = CreateContext();
+        var inventoryClient = new FakeInventoryClient(new Dictionary<int, int>());
         var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 99999) }));
+            () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 1) }));
     }
 }
