@@ -2,12 +2,60 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Moq;
+using Moq.Protected;
+using System.Net;
+using System.Net.Http.Json;
+using Xunit;
 using OrderManager.Api.Data;
-using OrderManager.Api.Models;
 using OrderManager.Api.Services;
 using Xunit;
 
 namespace OrderManager.Api.Tests;
+
+public class MockInventoryServiceClient : IInventoryServiceClient
+{
+    private readonly AppDbContext _context;
+
+    public MockInventoryServiceClient(AppDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<List<InventoryItem>> GetAllInventoryAsync()
+        => await _context.InventoryItems.ToListAsync();
+
+    public async Task<InventoryItem?> GetInventoryByProductIdAsync(int productId)
+        => await _context.InventoryItems.FirstOrDefaultAsync(i => i.ProductId == productId);
+
+    public async Task<InventoryItem> RestockAsync(int productId, int quantity)
+    {
+        var item = await _context.InventoryItems.FirstAsync(i => i.ProductId == productId);
+        item.QuantityOnHand += quantity;
+        await _context.SaveChangesAsync();
+        return item;
+    }
+
+    public async Task<List<InventoryItem>> GetLowStockItemsAsync()
+        => await _context.InventoryItems.Where(i => i.QuantityOnHand <= i.ReorderLevel).ToListAsync();
+
+    public async Task<InventoryItem?> DeductStockAsync(int productId, int quantity)
+    {
+        var item = await _context.InventoryItems.FirstOrDefaultAsync(i => i.ProductId == productId);
+        if (item == null) return null;
+        if (item.QuantityOnHand < quantity)
+            throw new InvalidOperationException($"Insufficient stock for product {productId}");
+        item.QuantityOnHand -= quantity;
+        await _context.SaveChangesAsync();
+        return item;
+    }
+
+    public async Task<int> GetStockLevelAsync(int productId)
+    {
+        var item = await _context.InventoryItems.FirstOrDefaultAsync(i => i.ProductId == productId);
+        return item?.QuantityOnHand ?? 0;
+    }
+}
 
 public class OrderServiceTests
 {
