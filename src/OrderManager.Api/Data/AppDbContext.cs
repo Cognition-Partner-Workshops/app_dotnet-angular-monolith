@@ -11,7 +11,6 @@ public class AppDbContext : DbContext
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
-    // InventoryItems removed — now managed by the inventory-service microservice
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -46,7 +45,5 @@ public class AppDbContext : DbContext
             entity.HasOne(e => e.Product).WithMany(p => p.OrderItems).HasForeignKey(e => e.ProductId);
             entity.Property(e => e.UnitPrice).HasColumnType("decimal(18,2)");
         });
-
-        // InventoryItem entity removed — now managed by the inventory-service microservice
     }
 }
