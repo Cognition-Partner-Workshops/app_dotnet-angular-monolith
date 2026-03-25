@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using OrderManager.Api.Models;
 
 namespace OrderManager.Api.Services;
 
@@ -6,7 +7,7 @@ namespace OrderManager.Api.Services;
 /// HTTP client for communicating with the standalone inventory microservice.
 /// Replaces direct database access for inventory operations.
 /// </summary>
-public class InventoryServiceClient : IInventoryServiceClient
+public class InventoryServiceClient
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<InventoryServiceClient> _logger;
@@ -89,8 +90,11 @@ public class InventoryServiceClient : IInventoryServiceClient
                 new { Quantity = quantity });
             if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
             {
-                var error = await response.Content.ReadAsStringAsync();
-                throw new InvalidOperationException($"Insufficient stock for product {productId}. Service response: {error}");
+                throw new InvalidOperationException($"Insufficient stock for product {productId}");
+            }
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return null;
             }
             response.EnsureSuccessStatusCode();
             return await response.Content.ReadFromJsonAsync<InventoryItemDto>();
