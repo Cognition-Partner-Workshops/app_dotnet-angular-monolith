@@ -1,19 +1,15 @@
 using Microsoft.AspNetCore.Mvc;
-using OrderManager.Api.Clients;
+using OrderManager.Api.Services;
 
 namespace OrderManager.Api.Controllers;
 
-/// <summary>
-/// Proxies inventory requests to the standalone inventory-service microservice.
-/// This controller replaces the former in-process InventoryService with HTTP calls.
-/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class InventoryController : ControllerBase
 {
-    private readonly InventoryServiceHttpClient _inventoryClient;
+    private readonly IInventoryServiceClient _inventoryClient;
 
-    public InventoryController(InventoryServiceHttpClient inventoryClient)
+    public InventoryController(IInventoryServiceClient inventoryClient)
     {
         _inventoryClient = inventoryClient;
     }
