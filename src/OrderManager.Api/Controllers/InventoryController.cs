@@ -3,13 +3,17 @@ using OrderManager.Api.Clients;
 
 namespace OrderManager.Api.Controllers;
 
+/// <summary>
+/// Proxies inventory requests to the standalone inventory-service microservice.
+/// This controller replaces the former in-process InventoryService with HTTP calls.
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class InventoryController : ControllerBase
 {
-    private readonly InventoryHttpClient _inventoryClient;
+    private readonly InventoryServiceHttpClient _inventoryClient;
 
-    public InventoryController(InventoryHttpClient inventoryClient)
+    public InventoryController(InventoryServiceHttpClient inventoryClient)
     {
         _inventoryClient = inventoryClient;
     }
