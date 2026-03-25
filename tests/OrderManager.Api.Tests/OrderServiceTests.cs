@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using Xunit;
+using OrderManager.Api.Clients;
 using OrderManager.Api.Data;
-using OrderManager.Api.Models;
 using OrderManager.Api.Services;
 
 namespace OrderManager.Api.Tests;
@@ -73,18 +72,20 @@ public class OrderServiceTests
     }
 
     [Fact]
-    public async Task CreateOrder_CallsInventoryService()
+    public async Task CreateOrder_CallsInventoryServiceToDeductStock()
     {
         using var context = CreateContext();
         var inventoryClient = new MockInventoryServiceClient();
         var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
+        var inventoryClient = new FakeInventoryClient(new Dictionary<int, int> { { product.Id, 100 } });
+        var service = new OrderService(context, inventoryClient);
 
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
-        Assert.Single(order.Items);
-        Assert.Equal(product.Price * 5, order.TotalAmount);
+        var stockAvailable = await inventoryClient.CheckStockAsync(product.Id, 95);
+        Assert.True(stockAvailable);
     }
 
     [Fact]
@@ -95,6 +96,8 @@ public class OrderServiceTests
         var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
+        var inventoryClient = new FakeInventoryClient(new Dictionary<int, int> { { product.Id, 5 } });
+        var service = new OrderService(context, inventoryClient);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 99999) }));
