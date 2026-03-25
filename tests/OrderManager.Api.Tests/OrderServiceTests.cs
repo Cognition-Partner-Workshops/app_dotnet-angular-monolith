@@ -72,7 +72,7 @@ public class OrderServiceTests
     }
 
     [Fact]
-    public async Task CreateOrder_ThrowsOnInsufficientStock()
+    public async Task CreateOrder_ThrowsWhenInventoryServiceReturnsConflict()
     {
         using var context = CreateContext();
         var product = await context.Products.FirstAsync();
