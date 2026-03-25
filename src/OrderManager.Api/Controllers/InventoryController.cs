@@ -47,6 +47,24 @@ public class InventoryController : ControllerBase
 
     [HttpGet("low-stock")]
     public async Task<IActionResult> GetLowStock() => Ok(await _inventoryClient.GetLowStockItemsAsync());
+
+    [HttpPost("product/{productId}/deduct")]
+    public async Task<IActionResult> Deduct(int productId, [FromBody] DeductRequest request)
+    {
+        try
+        {
+            var item = await _inventoryClient.DeductStockAsync(productId, request.Quantity);
+            return Ok(item);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { error = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+    }
 }
 
 public record RestockRequest(int Quantity);
