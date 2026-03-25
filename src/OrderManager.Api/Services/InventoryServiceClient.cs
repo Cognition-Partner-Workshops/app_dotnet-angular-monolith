@@ -1,19 +1,6 @@
 using System.Net.Http.Json;
-using OrderManager.Api.Models;
 
 namespace OrderManager.Api.Services;
-
-/// <summary>
-/// Contract for inventory operations (calls the inventory microservice).
-/// </summary>
-public interface IInventoryServiceClient
-{
-    Task<List<InventoryItemDto>> GetAllInventoryAsync();
-    Task<InventoryItemDto?> GetInventoryByProductIdAsync(int productId);
-    Task<InventoryItemDto> RestockAsync(int productId, int quantity);
-    Task<List<InventoryItemDto>> GetLowStockItemsAsync();
-    Task<InventoryItemDto?> DeductStockAsync(int productId, int quantity);
-}
 
 /// <summary>
 /// HTTP client for communicating with the standalone inventory microservice.
@@ -89,6 +76,32 @@ public class InventoryServiceClient : IInventoryServiceClient
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get low stock items from inventory-service");
+            throw;
+        }
+    }
+
+    public async Task<InventoryItemDto?> DeductStockAsync(int productId, int quantity)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync(
+                $"api/inventory/product/{productId}/deduct",
+                new { Quantity = quantity });
+            if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                throw new InvalidOperationException($"Insufficient stock for product {productId}. Service response: {error}");
+            }
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<InventoryItemDto>();
+        }
+        catch (InvalidOperationException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to deduct stock for product {ProductId} via inventory-service", productId);
             throw;
         }
     }

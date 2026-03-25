@@ -12,4 +12,5 @@ public interface IInventoryServiceClient
     Task<InventoryItemDto> RestockAsync(int productId, int quantity);
     Task<List<InventoryItemDto>> GetLowStockItemsAsync();
     Task<InventoryItemDto?> DeductStockAsync(int productId, int quantity);
+    Task<StockReservationResponse> CheckAndReserveStockAsync(StockReservationRequest request);
 }

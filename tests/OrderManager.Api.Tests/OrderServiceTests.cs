@@ -39,6 +39,30 @@ public class FakeInventoryServiceClient : IInventoryServiceClient
 
     public Task<List<InventoryItemDto>> GetLowStockItemsAsync() =>
         Task.FromResult(new List<InventoryItemDto>());
+
+    public Task<StockReservationResponse> CheckAndReserveStockAsync(StockReservationRequest request)
+    {
+        var details = new List<ReservationDetail>();
+        foreach (var item in request.Items)
+        {
+            var available = _stock.GetValueOrDefault(item.ProductId);
+            if (available < item.Quantity)
+            {
+                return Task.FromResult(new StockReservationResponse
+                {
+                    Success = false,
+                    Message = $"Insufficient stock for product {item.ProductId}",
+                    Details = new List<ReservationDetail>
+                    {
+                        new() { ProductId = item.ProductId, RequestedQuantity = item.Quantity, AvailableQuantity = available, Reserved = false }
+                    }
+                });
+            }
+            _stock[item.ProductId] -= item.Quantity;
+            details.Add(new ReservationDetail { ProductId = item.ProductId, RequestedQuantity = item.Quantity, AvailableQuantity = available, Reserved = true });
+        }
+        return Task.FromResult(new StockReservationResponse { Success = true, Message = "Stock reserved", Details = details });
+    }
 }
 
 public class OrderServiceTests
