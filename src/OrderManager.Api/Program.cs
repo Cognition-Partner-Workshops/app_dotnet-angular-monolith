@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using OrderManager.Api.Clients;
 using OrderManager.Api.Data;
 using OrderManager.Api.Services;
 
@@ -8,9 +7,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=ordermanager.db"));
 
-builder.Services.AddHttpClient<IInventoryClient, InventoryHttpClient>(client =>
+// Register HTTP client for the inventory microservice
+var inventoryServiceUrl = builder.Configuration["InventoryService:BaseUrl"] ?? "http://localhost:5002";
+builder.Services.AddHttpClient<InventoryServiceClient>(client =>
 {
-    var baseUrl = builder.Configuration["InventoryService:BaseUrl"] ?? "http://localhost:5002";
+    var baseUrl = builder.Configuration["InventoryService:BaseUrl"] ?? "http://localhost:5100";
     client.BaseAddress = new Uri(baseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
 });
