@@ -54,6 +54,11 @@ public class InventoryService
     public async Task<InventoryItem> DeductStockAsync(int productId, int quantity)
     {
         var response = await _httpClient.PostAsJsonAsync($"/api/inventory/product/{productId}/deduct", new { quantity });
+        if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+        {
+            var error = await response.Content.ReadAsStringAsync();
+            throw new InvalidOperationException($"Insufficient stock for product {productId}: {error}");
+        }
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<InventoryItem>()
             ?? throw new InvalidOperationException("Failed to deserialize deduct response");
