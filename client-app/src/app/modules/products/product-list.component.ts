@@ -2,6 +2,11 @@ import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 
+/**
+ * Displays the product catalog with SKU, category, price, and current stock.
+ * Stock is sourced from the product's associated inventory record.
+ * Data is fetched from GET /api/products on component initialisation.
+ */
 @Component({
   selector: 'app-product-list',
   standalone: true,

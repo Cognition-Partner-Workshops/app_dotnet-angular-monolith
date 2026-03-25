@@ -2,6 +2,12 @@ import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 
+/**
+ * Displays warehouse inventory with stock levels and location.
+ * Rows where quantityOnHand <= reorderLevel receive the "low-stock" CSS class
+ * so they can be visually highlighted in the stylesheet.
+ * Data is fetched from GET /api/inventory on component initialisation.
+ */
 @Component({
   selector: 'app-inventory-list',
   standalone: true,

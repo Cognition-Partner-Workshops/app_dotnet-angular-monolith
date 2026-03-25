@@ -2,12 +2,21 @@ using OrderManager.Api.Models;
 
 namespace OrderManager.Api.Data;
 
+/// <summary>
+/// Populates the database with sample customers, products, and inventory
+/// records on first run so the application is immediately usable for demos.
+/// </summary>
 public static class SeedData
 {
+    /// <summary>
+    /// Seeds the database if it is empty. Safe to call on every startup —
+    /// the method short-circuits when products already exist.
+    /// </summary>
     public static void Initialize(AppDbContext context)
     {
         context.Database.EnsureCreated();
 
+        // Idempotency check — only seed when the database is empty.
         if (context.Products.Any()) return;
 
         var customers = new[]
@@ -18,6 +27,7 @@ public static class SeedData
         };
         context.Customers.AddRange(customers);
 
+        // --- Catalog products with SKU codes --------------------------------
         var products = new[]
         {
             new Product { Name = "Widget A", Description = "Standard widget", Category = "Widgets", Price = 9.99m, Sku = "WGT-001" },
@@ -27,8 +37,9 @@ public static class SeedData
             new Product { Name = "Thingamajig", Description = "Multi-purpose thingamajig", Category = "Misc", Price = 14.99m, Sku = "THG-001" },
         };
         context.Products.AddRange(products);
-        context.SaveChanges();
+        context.SaveChanges(); // Flush so Product IDs are generated before inventory FK assignment
 
+        // --- Initial warehouse stock (quantity scales with product index) ----
         var inventoryItems = products.Select((p, i) => new InventoryItem
         {
             ProductId = p.Id,

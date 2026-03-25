@@ -2,6 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 
+/**
+ * Displays a table of all orders sorted newest-first.
+ * Data is fetched from GET /api/orders on component initialisation.
+ */
 @Component({
   selector: 'app-order-list',
   standalone: true,

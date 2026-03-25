@@ -2,6 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 
+/**
+ * Displays a table of all customer records including contact information.
+ * Data is fetched from GET /api/customers on component initialisation.
+ */
 @Component({
   selector: 'app-customer-list',
   standalone: true,
