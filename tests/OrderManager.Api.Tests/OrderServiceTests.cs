@@ -6,21 +6,13 @@ using Xunit;
 
 namespace OrderManager.Api.Tests;
 
-/// <summary>
-/// In-memory mock of IInventoryServiceClient for testing.
-/// </summary>
-public class FakeInventoryServiceClient : IInventoryServiceClient
+public class FakeInventoryClient : IInventoryServiceClient
 {
-    private readonly Dictionary<int, int> _stock;
-    private readonly bool _shouldThrowOnDeduct;
+    private readonly bool _shouldFail;
 
-    public FakeInventoryServiceClient(bool shouldThrowOnDeduct = false)
+    public FakeInventoryClient(bool shouldFail = false)
     {
-        _stock = new Dictionary<int, int>
-        {
-            { 1, 50 }, { 2, 100 }, { 3, 150 }, { 4, 200 }, { 5, 250 }
-        };
-        _shouldThrowOnDeduct = shouldThrowOnDeduct;
+        _shouldFail = shouldFail;
     }
 
     public Task<List<InventoryItem>> GetAllInventoryAsync() =>
@@ -99,9 +91,8 @@ public class OrderServiceTests
         var service = new OrderService(context, new FakeInventoryServiceClient());
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
-        Assert.NotNull(order);
         Assert.Single(order.Items);
-        Assert.Equal(product.Id, order.Items.First().ProductId);
+        Assert.Equal(5, order.Items.First().Quantity);
     }
 
     [Fact]
