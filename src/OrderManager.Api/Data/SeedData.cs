@@ -28,7 +28,5 @@ public static class SeedData
         };
         context.Products.AddRange(products);
         context.SaveChanges();
-
-        // Inventory seeding removed — inventory is now managed by the inventory-service microservice
     }
 }
