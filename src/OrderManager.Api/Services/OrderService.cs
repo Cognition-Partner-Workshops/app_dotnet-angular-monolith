@@ -4,12 +4,23 @@ using OrderManager.Api.Models;
 
 namespace OrderManager.Api.Services;
 
+/// <summary>
+/// Orchestrates order creation, status updates, and stock reservation/deduction
+/// by coordinating between the local database and the inventory microservice.
+/// </summary>
 public class OrderService
 {
     private readonly AppDbContext _context;
-    private readonly InventoryServiceClient _inventoryClient;
+    private readonly InventoryApiClient _inventoryApiClient;
+    private readonly ILogger<OrderService> _logger;
 
-    public OrderService(AppDbContext context, InventoryServiceClient inventoryClient)
+    /// <summary>
+    /// Initializes a new instance of <see cref="OrderService"/>.
+    /// </summary>
+    /// <param name="context">The EF Core database context for orders, products, and customers.</param>
+    /// <param name="inventoryApiClient">HTTP client for the inventory microservice.</param>
+    /// <param name="logger">Logger for diagnostic output.</param>
+    public OrderService(AppDbContext context, InventoryApiClient inventoryApiClient, ILogger<OrderService> logger)
     {
         _context = context;
         _inventoryApiClient = inventoryApiClient;
@@ -48,7 +59,7 @@ public class OrderService
             }).ToList()
         };
 
-        var reservationResult = await _inventoryClient.CheckAndReserveStockAsync(reservationRequest);
+        var reservationResult = await _inventoryApiClient.CheckAndReserveStockAsync(reservationRequest);
         if (!reservationResult.Success)
         {
             throw new InvalidOperationException($"Stock reservation failed: {reservationResult.Message}");
