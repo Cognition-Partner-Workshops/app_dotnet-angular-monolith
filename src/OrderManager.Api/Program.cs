@@ -7,11 +7,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=ordermanager.db"));
 
-var inventoryServiceUrl = builder.Configuration.GetValue<string>("InventoryServiceUrl") ?? "http://localhost:5100";
 builder.Services.AddHttpClient<InventoryHttpClient>(client =>
 {
-    client.BaseAddress = new Uri(inventoryServiceUrl);
-    client.Timeout = TimeSpan.FromSeconds(30);
+    var baseUrl = builder.Configuration["InventoryService:BaseUrl"] ?? "http://localhost:5199";
+    client.BaseAddress = new Uri(baseUrl);
 });
 
 builder.Services.AddScoped<OrderService>();
