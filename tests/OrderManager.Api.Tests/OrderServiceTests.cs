@@ -53,6 +53,7 @@ public class OrderServiceTests
 
         Assert.NotNull(order);
         Assert.Single(order.Items);
+        Assert.Equal(product.Price * 5, order.TotalAmount);
     }
 
     [Fact]
