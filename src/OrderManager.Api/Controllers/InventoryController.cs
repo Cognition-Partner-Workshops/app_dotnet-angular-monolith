@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using OrderManager.Api.Services;
+using OrderManager.Api.Clients;
 
 namespace OrderManager.Api.Controllers;
 
@@ -60,3 +60,4 @@ public class InventoryController : ControllerBase
 }
 
 public record RestockRequest(int Quantity);
+public record DeductRequest(int Quantity);
