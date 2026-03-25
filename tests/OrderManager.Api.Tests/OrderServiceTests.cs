@@ -9,6 +9,59 @@ using OrderManager.Api.Services;
 
 namespace OrderManager.Api.Tests;
 
+/// <summary>
+/// Fake HTTP message handler to simulate inventory microservice responses.
+/// </summary>
+public class FakeInventoryHandler : HttpMessageHandler
+{
+    private readonly Dictionary<int, int> _stockLevels = new();
+
+    public FakeInventoryHandler(Dictionary<int, int> stockLevels)
+    {
+        _stockLevels = stockLevels;
+    }
+
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        var path = request.RequestUri!.AbsolutePath;
+
+        // Handle deduct stock: POST /api/inventory/product/{id}/deduct
+        if (request.Method == HttpMethod.Post && path.Contains("/deduct"))
+        {
+            var segments = path.Split('/');
+            var productIdStr = segments[^2]; // second to last segment
+            if (int.TryParse(productIdStr, out var productId) && _stockLevels.ContainsKey(productId))
+            {
+                var content = request.Content!.ReadAsStringAsync(cancellationToken).Result;
+                var doc = JsonDocument.Parse(content);
+                var qty = doc.RootElement.GetProperty("quantity").GetInt32();
+
+                if (_stockLevels[productId] < qty)
+                {
+                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Conflict)
+                    {
+                        Content = JsonContent.Create(new { error = $"Insufficient stock for product {productId}. Available: {_stockLevels[productId]}" })
+                    });
+                }
+
+                _stockLevels[productId] -= qty;
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = JsonContent.Create(new InventoryItemDto
+                    {
+                        ProductId = productId,
+                        QuantityOnHand = _stockLevels[productId]
+                    })
+                });
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        }
+
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+    }
+}
+
 public class OrderServiceTests
 {
     private AppDbContext CreateContext()
@@ -49,8 +102,11 @@ public class OrderServiceTests
         var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
+        var stockLevels = new Dictionary<int, int> { { product.Id, 50 } };
+        var inventoryClient = CreateInventoryClient(stockLevels);
+        var service = new OrderService(context, inventoryClient);
 
-        var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
+        await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
         Assert.NotNull(order);
         Assert.Single(order.Items);
@@ -65,6 +121,9 @@ public class OrderServiceTests
         var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
+        var stockLevels = new Dictionary<int, int> { { product.Id, 3 } };
+        var inventoryClient = CreateInventoryClient(stockLevels);
+        var service = new OrderService(context, inventoryClient);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 99999) }));
