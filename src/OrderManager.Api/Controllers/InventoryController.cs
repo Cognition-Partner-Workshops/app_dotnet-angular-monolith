@@ -10,9 +10,9 @@ namespace OrderManager.Api.Controllers;
 [Route("api/[controller]")]
 public class InventoryController : ControllerBase
 {
-    private readonly InventoryServiceClient _inventoryClient;
+    private readonly InventoryApiClient _inventoryClient;
 
-    public InventoryController(InventoryServiceClient inventoryClient)
+    public InventoryController(InventoryApiClient inventoryClient)
     {
         _inventoryClient = inventoryClient;
     }
@@ -38,31 +38,19 @@ public class InventoryController : ControllerBase
     public async Task<IActionResult> GetLowStock() => Ok(await _inventoryClient.GetLowStockItemsAsync());
 
     [HttpPost("product/{productId}/deduct")]
-    public async Task<IActionResult> Deduct(int productId, [FromBody] DeductRequest request)
+    public async Task<IActionResult> DeductStock(int productId, [FromBody] DeductRequest request)
     {
         try
         {
-            var item = await _inventoryService.DeductStockAsync(productId, request.Quantity);
-            return Ok(item);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new { error = ex.Message });
+            var success = await _inventoryClient.CheckAndDeductStockAsync(productId, request.Quantity);
+            if (!success)
+                return Conflict(new { error = $"Insufficient stock for product {productId}" });
+            return Ok(new { productId, quantity = request.Quantity, deducted = true });
         }
         catch (HttpRequestException)
         {
             return StatusCode(502, new { error = "Inventory service unavailable" });
         }
-    }
-
-    [HttpGet("low-stock")]
-    public async Task<IActionResult> GetLowStock() => Ok(await _inventoryService.GetLowStockItemsAsync());
-
-    [HttpGet("product/{productId}/check")]
-    public async Task<IActionResult> CheckStock(int productId, [FromQuery] int quantity = 1)
-    {
-        var available = await _inventoryService.CheckStockAsync(productId, quantity);
-        return Ok(new { productId, quantity, available });
     }
 }
 
