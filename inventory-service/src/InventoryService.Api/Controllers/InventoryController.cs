@@ -27,6 +27,8 @@ public class InventoryController : ControllerBase
     [HttpPost("product/{productId}/restock")]
     public async Task<IActionResult> Restock(int productId, [FromBody] RestockRequest request)
     {
+        var existing = await _inventoryService.GetInventoryByProductIdAsync(productId);
+        if (existing is null) return NotFound(new { error = $"No inventory record for product {productId}" });
         var item = await _inventoryService.RestockAsync(productId, request.Quantity);
         return Ok(item);
     }
