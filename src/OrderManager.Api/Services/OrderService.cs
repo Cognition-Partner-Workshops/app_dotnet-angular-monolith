@@ -43,27 +43,51 @@ public class OrderService
             ShippingAddress = $"{customer.Address}, {customer.City}, {customer.State} {customer.ZipCode}"
         };
 
-        foreach (var (productId, quantity) in items)
+        var deducted = new List<(int ProductId, int Quantity)>();
+
+        try
         {
-            var product = await _context.Products.FindAsync(productId)
-                ?? throw new ArgumentException($"Product {productId} not found");
-
-            // Deduct stock via the inventory microservice
-            var inventory = await _inventoryClient.DeductStockAsync(productId, quantity)
-                ?? throw new InvalidOperationException($"No inventory record for product {productId}");
-
-            order.Items.Add(new OrderItem
+            foreach (var (productId, quantity) in items)
             {
-                ProductId = productId,
-                Quantity = quantity,
-                UnitPrice = product.Price
-            });
-        }
+                var product = await _context.Products.FindAsync(productId)
+                    ?? throw new ArgumentException($"Product {productId} not found");
 
-        order.TotalAmount = order.Items.Sum(i => i.Quantity * i.UnitPrice);
-        _context.Orders.Add(order);
-        await _context.SaveChangesAsync();
-        return order;
+                // Deduct stock via the inventory microservice
+                var inventory = await _inventoryClient.DeductStockAsync(productId, quantity)
+                    ?? throw new InvalidOperationException($"No inventory record for product {productId}");
+
+                deducted.Add((productId, quantity));
+
+                order.Items.Add(new OrderItem
+                {
+                    ProductId = productId,
+                    Quantity = quantity,
+                    UnitPrice = product.Price
+                });
+            }
+
+            order.TotalAmount = order.Items.Sum(i => i.Quantity * i.UnitPrice);
+            _context.Orders.Add(order);
+            await _context.SaveChangesAsync();
+            return order;
+        }
+        catch
+        {
+            // Compensate: restock any items that were already deducted
+            foreach (var (productId, quantity) in deducted)
+            {
+                try
+                {
+                    await _inventoryClient.RestockAsync(productId, quantity);
+                }
+                catch
+                {
+                    // Log compensation failure; manual reconciliation may be needed
+                }
+            }
+
+            throw;
+        }
     }
 
     public async Task<Order> UpdateOrderStatusAsync(int orderId, string status)
