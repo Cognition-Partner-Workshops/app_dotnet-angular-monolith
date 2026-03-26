@@ -13,6 +13,13 @@ public class AppDbContext : DbContext
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<InventoryItem> InventoryItems => Set<InventoryItem>();
 
+    // TrainConnect models
+    public DbSet<User> AppUsers => Set<User>();
+    public DbSet<Reel> Reels => Set<Reel>();
+    public DbSet<ReelLike> ReelLikes => Set<ReelLike>();
+    public DbSet<Contact> Contacts => Set<Contact>();
+    public DbSet<CallLog> CallLogs => Set<CallLog>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Customer>(entity =>
@@ -51,6 +58,49 @@ public class AppDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.HasOne(e => e.Product).WithOne(p => p.Inventory).HasForeignKey<InventoryItem>(e => e.ProductId);
+        });
+
+        // TrainConnect entity configurations
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Username).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Email).IsRequired().HasMaxLength(200);
+            entity.HasIndex(e => e.Username).IsUnique();
+            entity.HasIndex(e => e.Email).IsUnique();
+        });
+
+        modelBuilder.Entity<Reel>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.VideoUrl).IsRequired().HasMaxLength(500);
+            entity.HasOne(e => e.User).WithMany(u => u.Reels).HasForeignKey(e => e.UserId);
+            entity.HasIndex(e => e.CreatedAt);
+        });
+
+        modelBuilder.Entity<ReelLike>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasOne(e => e.Reel).WithMany(r => r.Likes).HasForeignKey(e => e.ReelId);
+            entity.HasOne(e => e.User).WithMany(u => u.ReelLikes).HasForeignKey(e => e.UserId);
+            entity.HasIndex(e => new { e.ReelId, e.UserId }).IsUnique();
+        });
+
+        modelBuilder.Entity<Contact>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasOne(e => e.User).WithMany(u => u.Contacts).HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.ContactUser).WithMany().HasForeignKey(e => e.ContactUserId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(e => new { e.UserId, e.ContactUserId }).IsUnique();
+        });
+
+        modelBuilder.Entity<CallLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasOne(e => e.Caller).WithMany(u => u.OutgoingCalls).HasForeignKey(e => e.CallerId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.Receiver).WithMany(u => u.IncomingCalls).HasForeignKey(e => e.ReceiverId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasIndex(e => e.StartedAt);
         });
     }
 }

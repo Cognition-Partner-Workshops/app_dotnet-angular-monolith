@@ -14,10 +14,16 @@
             "outputPath": "../src/OrderManager.Api/wwwroot",
             "index": "src/index.html",
             "browser": "src/main.ts",
-            "tsConfig": "tsconfig.app.json"
+            "tsConfig": "tsconfig.app.json",
+            "assets": [
+              "src/manifest.webmanifest"
+            ]
           }
         }
       }
     }
+  },
+  "cli": {
+    "analytics": false
   }
 }

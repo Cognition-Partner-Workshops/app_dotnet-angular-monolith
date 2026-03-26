@@ -1,4 +1,5 @@
 using OrderManager.Api.Models;
+using System.Security.Cryptography;
 
 namespace OrderManager.Api.Data;
 
@@ -38,5 +39,73 @@ public static class SeedData
         }).ToArray();
         context.InventoryItems.AddRange(inventoryItems);
         context.SaveChanges();
+
+        SeedTrainConnectData(context);
+    }
+
+    private static void SeedTrainConnectData(AppDbContext context)
+    {
+        if (context.AppUsers.Any()) return;
+
+        var demoPasswordHash = HashPassword("Demo@123");
+
+        var users = new[]
+        {
+            new User { Username = "alice", Email = "alice@trainconnect.app", PasswordHash = demoPasswordHash, DisplayName = "Alice Sharma", IsOnline = false },
+            new User { Username = "bob", Email = "bob@trainconnect.app", PasswordHash = demoPasswordHash, DisplayName = "Bob Kumar", IsOnline = false },
+            new User { Username = "charlie", Email = "charlie@trainconnect.app", PasswordHash = demoPasswordHash, DisplayName = "Charlie Patel", IsOnline = false },
+        };
+        context.AppUsers.AddRange(users);
+        context.SaveChanges();
+
+        var reels = new[]
+        {
+            new Reel { Title = "Beautiful Sunset from Train Window", Description = "Captured this amazing sunset during my Mumbai-Goa journey", VideoUrl = "/assets/reels/sunset.mp4", ThumbnailUrl = "/assets/reels/thumbs/sunset.jpg", DurationSeconds = 30, ViewCount = 1250, LikeCount = 340, UserId = users[0].Id, Tags = "sunset,train,travel", IsDownloadable = true, FileSizeBytes = 5242880 },
+            new Reel { Title = "Mountain Pass Through the Clouds", Description = "Incredible mountain views on the Shimla Express", VideoUrl = "/assets/reels/mountains.mp4", ThumbnailUrl = "/assets/reels/thumbs/mountains.jpg", DurationSeconds = 45, ViewCount = 2100, LikeCount = 580, UserId = users[1].Id, Tags = "mountains,scenic,railway", IsDownloadable = true, FileSizeBytes = 7340032 },
+            new Reel { Title = "Chai Vendor on Platform", Description = "The iconic chai walla at Nagpur Junction", VideoUrl = "/assets/reels/chai.mp4", ThumbnailUrl = "/assets/reels/thumbs/chai.jpg", DurationSeconds = 15, ViewCount = 4500, LikeCount = 1200, UserId = users[2].Id, Tags = "chai,culture,station", IsDownloadable = true, FileSizeBytes = 2621440 },
+            new Reel { Title = "Train Crossing Bridge at Dawn", Description = "Crossing the Pamban Bridge - a breathtaking experience", VideoUrl = "/assets/reels/bridge.mp4", ThumbnailUrl = "/assets/reels/thumbs/bridge.jpg", DurationSeconds = 60, ViewCount = 8700, LikeCount = 3200, UserId = users[0].Id, Tags = "bridge,dawn,iconic", IsDownloadable = true, FileSizeBytes = 10485760 },
+            new Reel { Title = "Tunnel Experience on Konkan Railway", Description = "Going through 92 tunnels on the Konkan route!", VideoUrl = "/assets/reels/tunnel.mp4", ThumbnailUrl = "/assets/reels/thumbs/tunnel.jpg", DurationSeconds = 20, ViewCount = 3300, LikeCount = 890, UserId = users[1].Id, Tags = "tunnel,konkan,adventure", IsDownloadable = true, FileSizeBytes = 3145728 },
+        };
+        context.Reels.AddRange(reels);
+        context.SaveChanges();
+
+        var contacts = new[]
+        {
+            new Contact { UserId = users[0].Id, ContactUserId = users[1].Id, DisplayName = "Bob Kumar" },
+            new Contact { UserId = users[0].Id, ContactUserId = users[2].Id, DisplayName = "Charlie Patel" },
+            new Contact { UserId = users[1].Id, ContactUserId = users[0].Id, DisplayName = "Alice Sharma" },
+            new Contact { UserId = users[2].Id, ContactUserId = users[0].Id, DisplayName = "Alice Sharma" },
+        };
+        context.Contacts.AddRange(contacts);
+        context.SaveChanges();
+    }
+
+    public static string HashPassword(string password)
+    {
+        byte[] salt = new byte[16];
+        using (var rng = RandomNumberGenerator.Create())
+        {
+            rng.GetBytes(salt);
+        }
+        var pbkdf2 = new Rfc2898DeriveBytes(password, salt, 100000, HashAlgorithmName.SHA256);
+        byte[] hash = pbkdf2.GetBytes(32);
+        byte[] hashBytes = new byte[48];
+        Array.Copy(salt, 0, hashBytes, 0, 16);
+        Array.Copy(hash, 0, hashBytes, 16, 32);
+        return Convert.ToBase64String(hashBytes);
+    }
+
+    public static bool VerifyPassword(string password, string storedHash)
+    {
+        byte[] hashBytes = Convert.FromBase64String(storedHash);
+        byte[] salt = new byte[16];
+        Array.Copy(hashBytes, 0, salt, 0, 16);
+        var pbkdf2 = new Rfc2898DeriveBytes(password, salt, 100000, HashAlgorithmName.SHA256);
+        byte[] hash = pbkdf2.GetBytes(32);
+        for (int i = 0; i < 32; i++)
+        {
+            if (hashBytes[i + 16] != hash[i]) return false;
+        }
+        return true;
     }
 }
