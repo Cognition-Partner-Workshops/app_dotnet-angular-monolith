@@ -1,8 +1,8 @@
 namespace OrderManager.Api.Models;
 
 /// <summary>
-/// DTO for inventory items returned from the inventory microservice.
-/// No longer an EF Core entity - inventory data is owned by inventory-service.
+/// DTO for deserializing responses from the Inventory microservice.
+/// No longer an EF entity — inventory data is owned by the inventory-service.
 /// </summary>
 public class InventoryItem
 {
@@ -14,6 +14,9 @@ public class InventoryItem
 
     /// <summary>Denormalized product name for display without cross-service calls.</summary>
     public string ProductName { get; set; } = string.Empty;
+
+    /// <summary>Product SKU code.</summary>
+    public string ProductSku { get; set; } = string.Empty;
 
     /// <summary>Current quantity available in the warehouse.</summary>
     public int QuantityOnHand { get; set; }

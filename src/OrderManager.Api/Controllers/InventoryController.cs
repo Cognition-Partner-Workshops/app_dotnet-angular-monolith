@@ -12,13 +12,13 @@ namespace OrderManager.Api.Controllers;
 [Produces("application/json")]
 public class InventoryController : ControllerBase
 {
-    private readonly IInventoryServiceClient _inventoryClient;
+    private readonly InventoryApiClient _inventoryClient;
 
     /// <summary>
     /// Initializes a new instance of <see cref="InventoryController"/>.
     /// </summary>
     /// <param name="inventoryClient">The HTTP client for the inventory microservice.</param>
-    public InventoryController(IInventoryServiceClient inventoryClient)
+    public InventoryController(InventoryApiClient inventoryClient)
     {
         _inventoryClient = inventoryClient;
     }
@@ -54,33 +54,6 @@ public class InventoryController : ControllerBase
         return Ok(item);
     }
 
-    /// <summary>Deducts stock from a product's inventory.</summary>
-    /// <param name="productId">The product identifier.</param>
-    /// <param name="request">Deduction details including quantity to remove.</param>
-    /// <response code="200">Stock was successfully deducted.</response>
-    /// <response code="404">No inventory record exists for this product.</response>
-    /// <response code="409">Insufficient stock to fulfil the deduction.</response>
-    [HttpPost("product/{productId}/deduct")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    public async Task<IActionResult> Deduct(int productId, [FromBody] DeductRequest request)
-    {
-        try
-        {
-            var item = await _inventoryClient.DeductStockAsync(productId, request.Quantity);
-            return Ok(item);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new { error = ex.Message });
-        }
-        catch (ArgumentException ex)
-        {
-            return NotFound(new { error = ex.Message });
-        }
-    }
-
     /// <summary>Returns inventory items that are at or below the reorder threshold.</summary>
     /// <response code="200">List of low-stock inventory items.</response>
     [HttpGet("low-stock")]
@@ -91,7 +64,3 @@ public class InventoryController : ControllerBase
 /// <summary>Request payload for restocking an inventory item.</summary>
 /// <param name="Quantity">The number of units to add to stock.</param>
 public record RestockRequest(int Quantity);
-
-/// <summary>Request payload for deducting stock from an inventory item.</summary>
-/// <param name="Quantity">The number of units to deduct.</param>
-public record DeductRequest(int Quantity);
