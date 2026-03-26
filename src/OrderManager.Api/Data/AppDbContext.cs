@@ -46,6 +46,5 @@ public class AppDbContext : DbContext
             entity.Property(e => e.UnitPrice).HasColumnType("decimal(18,2)");
         });
 
-        // InventoryItem is no longer an EF entity — inventory is owned by inventory-service
     }
 }
