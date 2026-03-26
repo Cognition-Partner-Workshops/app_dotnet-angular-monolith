@@ -1,1 +1,1 @@
-export const environment = { production: true, apiUrl: '', inventoryServiceUrl: '/api/inventory-proxy' };
+export const environment = { production: true, apiUrl: '', inventoryServiceUrl: '' };
