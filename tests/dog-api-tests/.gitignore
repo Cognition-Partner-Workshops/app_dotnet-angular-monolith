@@ -1,4 +1,10 @@
-__pycache__/
-*.pyc
-.pytest_cache/
+target/
+.classpath
+.project
+.settings/
+*.class
+*.jar
+*.log
+.idea/
+*.iml
 .env
