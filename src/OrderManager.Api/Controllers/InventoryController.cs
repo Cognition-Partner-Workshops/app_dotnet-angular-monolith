@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using OrderManager.Api.Services;
+using OrderManager.Api.Clients;
 
 namespace OrderManager.Api.Controllers;
 
@@ -12,13 +12,13 @@ namespace OrderManager.Api.Controllers;
 [Produces("application/json")]
 public class InventoryController : ControllerBase
 {
-    private readonly InventoryApiClient _inventoryClient;
+    private readonly IInventoryServiceClient _inventoryClient;
 
     /// <summary>
     /// Initializes a new instance of <see cref="InventoryController"/>.
     /// </summary>
     /// <param name="inventoryClient">The HTTP client for the inventory microservice.</param>
-    public InventoryController(InventoryApiClient inventoryClient)
+    public InventoryController(IInventoryServiceClient inventoryClient)
     {
         _inventoryClient = inventoryClient;
     }
