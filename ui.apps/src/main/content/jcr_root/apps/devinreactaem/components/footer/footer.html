@@ -1,0 +1,33 @@
+<sly data-sly-use.model="com.devin.aem.core.models.SocialShareModel"/>
+<footer class="cmp-footer" data-component="footer" data-cmp-is="react-footer">
+    <div class="cmp-footer__container">
+        <div class="cmp-footer__columns">
+            <div class="cmp-footer__column">
+                <h4 class="cmp-footer__title">DevinReactAEM</h4>
+                <p class="cmp-footer__description">A comprehensive React + AEM project demonstrating all major AEM features.</p>
+            </div>
+            <div class="cmp-footer__column">
+                <h4 class="cmp-footer__title">Quick Links</h4>
+                <ul class="cmp-footer__links">
+                    <li><a href="/content/devinreactaem/us/en.html">Home</a></li>
+                    <li><a href="/content/devinreactaem/us/en/about.html">About</a></li>
+                    <li><a href="/content/devinreactaem/us/en/contact.html">Contact</a></li>
+                </ul>
+            </div>
+            <div class="cmp-footer__column">
+                <h4 class="cmp-footer__title">Follow Us</h4>
+                <div class="cmp-footer__social" data-sly-test="${model}">
+                    <sly data-sly-list.platform="${model.platforms}">
+                        <a class="cmp-footer__social-link" href="${platform.url}"
+                           target="_blank" rel="noopener noreferrer" aria-label="${platform.name}">
+                            <i class="${platform.icon}"></i>
+                        </a>
+                    </sly>
+                </div>
+            </div>
+        </div>
+        <div class="cmp-footer__bottom">
+            <p class="cmp-footer__copyright">&copy; 2024 DevinReactAEM. All rights reserved.</p>
+        </div>
+    </div>
+</footer>

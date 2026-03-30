@@ -1,0 +1,41 @@
+<sly data-sly-use.model="com.devin.aem.core.models.FormContainerModel"/>
+<sly data-sly-test="${model}">
+    <div class="cmp-form" data-component="formcontainer"
+         data-cmp-is="react-form"
+         data-cmp-action="${model.actionUrl}"
+         data-cmp-method="${model.method}"
+         data-cmp-validate="${model.enableValidation}">
+        <h2 class="cmp-form__title" data-sly-test="${model.formTitle}">${model.formTitle}</h2>
+        <form class="cmp-form__form" action="${model.actionUrl}" method="${model.method}"
+              data-cmp-hook-form="form" novalidate="novalidate">
+            <div class="cmp-form__fields" data-sly-list.field="${model.formFields}">
+                <div class="cmp-form__field">
+                    <label class="cmp-form__label" for="field-${field.name}">
+                        ${field.label}
+                        <span class="cmp-form__required" data-sly-test="${field.required}">*</span>
+                    </label>
+                    <sly data-sly-test="${field.type == 'textarea'}">
+                        <textarea class="cmp-form__input cmp-form__textarea"
+                                  id="field-${field.name}" name="${field.name}"
+                                  placeholder="${field.placeholder}"
+                                  required="${field.required ? 'required' : ''}"
+                                  data-pattern="${field.pattern}"></textarea>
+                    </sly>
+                    <sly data-sly-test="${field.type != 'textarea'}">
+                        <input class="cmp-form__input" type="${field.type}"
+                               id="field-${field.name}" name="${field.name}"
+                               placeholder="${field.placeholder}"
+                               required="${field.required ? 'required' : ''}"
+                               pattern="${field.pattern}"/>
+                    </sly>
+                    <span class="cmp-form__error" data-sly-test="${field.errorMessage}"
+                          data-error-message="${field.errorMessage}"></span>
+                </div>
+            </div>
+            <div class="cmp-form__actions">
+                <button class="cmp-form__submit" type="submit">${model.submitLabel}</button>
+            </div>
+            <div class="cmp-form__status" data-cmp-hook-form="status" hidden="hidden"></div>
+        </form>
+    </div>
+</sly>

@@ -1,0 +1,25 @@
+<sly data-sly-use.model="com.devin.aem.core.models.NavigationModel"/>
+<sly data-sly-test="${model}">
+    <nav class="cmp-navigation" data-component="navigation"
+         data-cmp-is="react-navigation" role="navigation" aria-label="Main Navigation">
+        <div class="cmp-navigation__group">
+            <ul class="cmp-navigation__items">
+                <sly data-sly-list.item="${model.navigationItems}">
+                    <li class="cmp-navigation__item cmp-navigation__item--level-${item.level} ${item.active ? 'cmp-navigation__item--active' : ''}">
+                        <a class="cmp-navigation__item-link" href="${item.path}">${item.title}</a>
+                        <ul class="cmp-navigation__subitems" data-sly-test="${item.hasChildren}">
+                            <sly data-sly-list.subItem="${item.children}">
+                                <li class="cmp-navigation__item cmp-navigation__item--level-${subItem.level}">
+                                    <a class="cmp-navigation__item-link" href="${subItem.path}">${subItem.title}</a>
+                                </li>
+                            </sly>
+                        </ul>
+                    </li>
+                </sly>
+            </ul>
+        </div>
+        <button class="cmp-navigation__toggle" aria-label="Toggle navigation" data-cmp-hook-navigation="toggle">
+            <span class="cmp-navigation__toggle-bar"></span>
+        </button>
+    </nav>
+</sly>

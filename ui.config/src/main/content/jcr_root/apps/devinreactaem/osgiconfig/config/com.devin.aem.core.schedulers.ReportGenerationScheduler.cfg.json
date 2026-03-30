@@ -1,0 +1,6 @@
+{
+    "scheduler.expression": "0 0 2 ? * MON",
+    "scheduler.concurrent": false,
+    "reportPath": "/content/devinreactaem/reports",
+    "enabled": true
+}

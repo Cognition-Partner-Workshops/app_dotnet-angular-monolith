@@ -1,0 +1,21 @@
+<sly data-sly-use.model="com.devin.aem.core.models.ContentFragmentListModel"/>
+<sly data-sly-test="${model}">
+    <div class="cmp-contentfragmentlist" data-component="contentfragmentlist"
+         data-cmp-is="react-contentfragmentlist"
+         data-cmp-parent-path="${model.parentPath}"
+         data-cmp-api-url="/bin/devinreactaem/contentfragments">
+        <div class="cmp-contentfragmentlist__items" data-sly-list.fragment="${model.fragments}">
+            <article class="cmp-contentfragmentlist__item">
+                <h3 class="cmp-contentfragmentlist__title">
+                    <a href="${fragment.path}.html">${fragment.title}</a>
+                </h3>
+                <p class="cmp-contentfragmentlist__description" data-sly-test="${fragment.description}">
+                    ${fragment.description}
+                </p>
+            </article>
+        </div>
+        <div class="cmp-contentfragmentlist__empty" data-sly-test="${!model.fragments || model.fragments.size == 0}">
+            <p>No content fragments found.</p>
+        </div>
+    </div>
+</sly>

@@ -1,0 +1,23 @@
+<sly data-sly-use.model="com.devin.aem.core.models.CardListModel"/>
+<sly data-sly-test="${model}">
+    <div class="cmp-cardlist cmp-cardlist--${model.layout}" data-component="cardlist"
+         data-cmp-is="react-cardlist" data-cmp-layout="${model.layout}">
+        <h2 class="cmp-cardlist__title" data-sly-test="${model.title}">${model.title}</h2>
+        <div class="cmp-cardlist__items" data-sly-list.card="${model.cardItems}">
+            <article class="cmp-cardlist__card">
+                <div class="cmp-cardlist__card-image" data-sly-test="${card.image}">
+                    <img src="${card.image}" alt="${card.title}" loading="lazy"/>
+                </div>
+                <div class="cmp-cardlist__card-content">
+                    <h3 class="cmp-cardlist__card-title">${card.title}</h3>
+                    <p class="cmp-cardlist__card-description" data-sly-test="${card.description}">
+                        ${card.description}
+                    </p>
+                    <a class="cmp-cardlist__card-link" href="${card.link}" data-sly-test="${card.link}">
+                        Learn More
+                    </a>
+                </div>
+            </article>
+        </div>
+    </div>
+</sly>

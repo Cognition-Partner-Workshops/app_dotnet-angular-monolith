@@ -1,0 +1,21 @@
+<sly data-sly-use.model="com.devin.aem.core.models.TeaserModel"/>
+<sly data-sly-test="${model}">
+    <article class="${model.teaserClass}" data-component="teaser"
+             data-cmp-is="react-teaser"
+             data-cmp-title="${model.title}"
+             data-cmp-description="${model.description}"
+             data-cmp-image="${model.image}"
+             data-cmp-link="${model.linkURL}">
+        <div class="cmp-teaser__image" data-sly-test="${model.image}">
+            <img src="${model.image}" alt="${model.title}" loading="lazy"/>
+        </div>
+        <div class="cmp-teaser__content">
+            <p class="cmp-teaser__pretitle" data-sly-test="${model.pretitle}">${model.pretitle}</p>
+            <h3 class="cmp-teaser__title" data-sly-test="${model.title}">${model.title}</h3>
+            <p class="cmp-teaser__description" data-sly-test="${model.description}">${model.description}</p>
+            <a class="cmp-teaser__action-link" href="${model.linkURL}" data-sly-test="${model.linkText && model.linkURL}">
+                ${model.linkText}
+            </a>
+        </div>
+    </article>
+</sly>

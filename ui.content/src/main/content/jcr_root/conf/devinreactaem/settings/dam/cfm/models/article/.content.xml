@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:jcr="http://www.jcp.org/jcr/1.0"
+          xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
+          xmlns:granite="http://www.adobe.com/jcr/granite/1.0"
+    jcr:primaryType="dam:ContentFragmentModel"
+    jcr:title="Article"
+    jcr:description="Content Fragment Model for articles and blog posts"
+    sling:resourceType="dam/cfm/models/console/components/data/entity/default"
+    granite:formpath="/conf/devinreactaem/settings/dam/cfm/models/article">
+    <model jcr:primaryType="nt:unstructured"
+           dataTypesConfig="/mnt/overlay/settings/dam/cfm/models/formbuilderconfig/datatypes"
+           sling:resourceType="wcm/scaffolding/components/scaffolding">
+        <items jcr:primaryType="nt:unstructured">
+            <title jcr:primaryType="nt:unstructured"
+                   fieldLabel="Title"
+                   name="title"
+                   metaType="text-single"
+                   required="{Boolean}true"
+                   sling:resourceType="granite/ui/components/coral/foundation/form/textfield"/>
+            <author jcr:primaryType="nt:unstructured"
+                    fieldLabel="Author"
+                    name="author"
+                    metaType="text-single"
+                    sling:resourceType="granite/ui/components/coral/foundation/form/textfield"/>
+            <publishDate jcr:primaryType="nt:unstructured"
+                         fieldLabel="Publish Date"
+                         name="publishDate"
+                         metaType="calendar"
+                         sling:resourceType="granite/ui/components/coral/foundation/form/datepicker"/>
+            <summary jcr:primaryType="nt:unstructured"
+                     fieldLabel="Summary"
+                     name="summary"
+                     metaType="text-multi"
+                     sling:resourceType="granite/ui/components/coral/foundation/form/textarea"/>
+            <body jcr:primaryType="nt:unstructured"
+                  fieldLabel="Body"
+                  name="body"
+                  metaType="text-multi"
+                  sling:resourceType="granite/ui/components/coral/foundation/form/textarea"/>
+            <featuredImage jcr:primaryType="nt:unstructured"
+                           fieldLabel="Featured Image"
+                           name="featuredImage"
+                           metaType="content-reference"
+                           rootPath="/content/dam"
+                           sling:resourceType="granite/ui/components/coral/foundation/form/pathfield"/>
+            <category jcr:primaryType="nt:unstructured"
+                      fieldLabel="Category"
+                      name="category"
+                      metaType="enumeration"
+                      sling:resourceType="granite/ui/components/coral/foundation/form/select">
+                <items jcr:primaryType="nt:unstructured">
+                    <technology jcr:primaryType="nt:unstructured" text="Technology" value="technology"/>
+                    <business jcr:primaryType="nt:unstructured" text="Business" value="business"/>
+                    <lifestyle jcr:primaryType="nt:unstructured" text="Lifestyle" value="lifestyle"/>
+                    <travel jcr:primaryType="nt:unstructured" text="Travel" value="travel"/>
+                </items>
+            </category>
+            <tags jcr:primaryType="nt:unstructured"
+                  fieldLabel="Tags"
+                  name="tags"
+                  metaType="text-single"
+                  sling:resourceType="granite/ui/components/coral/foundation/form/textfield"/>
+        </items>
+    </model>
+</jcr:root>

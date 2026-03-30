@@ -1,0 +1,13 @@
+<sly data-sly-use.model="com.devin.aem.core.models.SocialShareModel"/>
+<sly data-sly-test="${model}">
+    <div class="cmp-socialshare" data-component="socialshare" data-cmp-is="react-socialshare">
+        <sly data-sly-list.platform="${model.platforms}">
+            <a class="cmp-socialshare__link cmp-socialshare__link--${platform.id}"
+               href="${platform.url}" target="_blank" rel="noopener noreferrer"
+               aria-label="Share on ${platform.name}">
+                <i class="${platform.icon}"></i>
+                <span class="cmp-socialshare__label">${platform.name}</span>
+            </a>
+        </sly>
+    </div>
+</sly>

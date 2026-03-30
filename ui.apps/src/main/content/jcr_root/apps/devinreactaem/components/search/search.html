@@ -1,0 +1,20 @@
+<sly data-sly-use.model="com.devin.aem.core.models.SearchResultsModel"/>
+<div class="cmp-search" data-component="search"
+     data-cmp-is="react-search"
+     data-cmp-search-root="${model.searchRoot}"
+     data-cmp-results-per-page="${model.resultsPerPage}"
+     data-cmp-api-url="/bin/devinreactaem/search">
+    <form class="cmp-search__form" role="search" action="${model.searchRoot}.searchresults.html" method="get">
+        <div class="cmp-search__field">
+            <input class="cmp-search__input" type="search" name="q"
+                   placeholder="Search..." autocomplete="off"
+                   data-cmp-hook-search="input" aria-label="Search"/>
+            <button class="cmp-search__submit" type="submit" aria-label="Submit search">
+                <span class="cmp-search__icon"></span>
+            </button>
+        </div>
+        <div class="cmp-search__results" data-cmp-hook-search="results" aria-live="polite" hidden="hidden">
+            <ul class="cmp-search__results-list"></ul>
+        </div>
+    </form>
+</div>

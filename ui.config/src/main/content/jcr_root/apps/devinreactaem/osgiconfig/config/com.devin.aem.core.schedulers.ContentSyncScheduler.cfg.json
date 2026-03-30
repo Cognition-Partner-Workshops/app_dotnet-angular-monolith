@@ -1,0 +1,6 @@
+{
+    "scheduler.expression": "0 0 */6 ? * *",
+    "scheduler.concurrent": false,
+    "syncPath": "/content/devinreactaem",
+    "enabled": true
+}

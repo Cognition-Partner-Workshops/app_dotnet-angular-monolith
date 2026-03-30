@@ -1,0 +1,39 @@
+<sly data-sly-use.model="com.devin.aem.core.models.CarouselModel"/>
+<sly data-sly-test="${model}">
+    <div class="cmp-carousel" data-component="carousel"
+         data-cmp-is="react-carousel"
+         data-cmp-autoplay="${model.autoplay}"
+         data-cmp-delay="${model.autoplayDelay}"
+         data-cmp-transition="${model.transition}">
+        <div class="cmp-carousel__content">
+            <div class="cmp-carousel__items" data-sly-list.slide="${model.slideItems}">
+                <div class="cmp-carousel__item ${itemList.first ? 'cmp-carousel__item--active' : ''}"
+                     data-cmp-hook-carousel="item">
+                    <img class="cmp-carousel__image" src="${slide.image}" alt="${slide.title}"
+                         data-sly-test="${slide.image}" loading="lazy"/>
+                    <div class="cmp-carousel__caption" data-sly-test="${slide.title || slide.caption}">
+                        <h3 class="cmp-carousel__title" data-sly-test="${slide.title}">${slide.title}</h3>
+                        <p class="cmp-carousel__text" data-sly-test="${slide.caption}">${slide.caption}</p>
+                    </div>
+                    <a class="cmp-carousel__link" href="${slide.link}" data-sly-test="${slide.link}"></a>
+                </div>
+            </div>
+        </div>
+        <div class="cmp-carousel__actions" data-sly-test="${model.showControls}">
+            <button class="cmp-carousel__action cmp-carousel__action--previous"
+                    data-cmp-hook-carousel="previous" aria-label="Previous">
+                <span class="cmp-carousel__action-icon"></span>
+            </button>
+            <button class="cmp-carousel__action cmp-carousel__action--next"
+                    data-cmp-hook-carousel="next" aria-label="Next">
+                <span class="cmp-carousel__action-icon"></span>
+            </button>
+        </div>
+        <ol class="cmp-carousel__indicators" data-sly-test="${model.showIndicators}" role="tablist">
+            <sly data-sly-list.slide="${model.slideItems}">
+                <li class="cmp-carousel__indicator ${itemList.first ? 'cmp-carousel__indicator--active' : ''}"
+                    data-cmp-hook-carousel="indicator" role="tab"></li>
+            </sly>
+        </ol>
+    </div>
+</sly>

@@ -1,0 +1,20 @@
+<sly data-sly-use.model="com.devin.aem.core.models.BreadcrumbModel"/>
+<sly data-sly-test="${model}">
+    <nav class="cmp-breadcrumb" data-component="breadcrumb"
+         data-cmp-is="react-breadcrumb" aria-label="Breadcrumb">
+        <ol class="cmp-breadcrumb__list" itemscope="" itemtype="http://schema.org/BreadcrumbList">
+            <sly data-sly-list.item="${model.breadcrumbItems}">
+                <li class="cmp-breadcrumb__item ${item.active ? 'cmp-breadcrumb__item--active' : ''}"
+                    itemprop="itemListElement" itemscope="" itemtype="http://schema.org/ListItem">
+                    <a class="cmp-breadcrumb__item-link" href="${item.path}"
+                       data-sly-test="${!item.active}" itemprop="item">
+                        <span itemprop="name">${item.title}</span>
+                    </a>
+                    <span class="cmp-breadcrumb__item-title" data-sly-test="${item.active}"
+                          itemprop="name">${item.title}</span>
+                    <meta itemprop="position" content="${itemList.index + 1}"/>
+                </li>
+            </sly>
+        </ol>
+    </nav>
+</sly>

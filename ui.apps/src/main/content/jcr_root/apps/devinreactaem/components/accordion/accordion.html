@@ -1,0 +1,27 @@
+<sly data-sly-use.model="com.devin.aem.core.models.AccordionModel"/>
+<sly data-sly-test="${model}">
+    <div class="cmp-accordion" data-component="accordion"
+         data-cmp-is="react-accordion"
+         data-cmp-single-expansion="${model.singleExpansion}">
+        <h2 class="cmp-accordion__heading" data-sly-test="${model.heading}">${model.heading}</h2>
+        <div class="cmp-accordion__items"
+             data-sly-list.item="${model.accordionItems}">
+            <div class="cmp-accordion__item" data-cmp-hook-accordion="item">
+                <h3 class="cmp-accordion__header">
+                    <button class="cmp-accordion__button" data-cmp-hook-accordion="button"
+                            type="button" aria-expanded="false">
+                        <span class="cmp-accordion__icon" data-sly-test="${item.icon}">
+                            <i class="${item.icon}"></i>
+                        </span>
+                        <span class="cmp-accordion__title">${item.title}</span>
+                        <span class="cmp-accordion__indicator"></span>
+                    </button>
+                </h3>
+                <div class="cmp-accordion__panel" data-cmp-hook-accordion="panel"
+                     role="region" hidden="hidden">
+                    <div class="cmp-accordion__panel-content">${item.content @ context='html'}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</sly>

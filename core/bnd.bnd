@@ -1,0 +1,6 @@
+Bundle-Category: devinreactaem
+Import-Package: javax.annotation;version=0.0.0, *
+Sling-Model-Packages: com.devin.aem.core.models
+Export-Package: com.devin.aem.core.models, \
+    com.devin.aem.core.services, \
+    com.devin.aem.core.services.impl

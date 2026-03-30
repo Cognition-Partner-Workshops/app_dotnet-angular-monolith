@@ -1,0 +1,9 @@
+{
+    "workflowpackageinfoprovider.filter": [
+        "/var/workflow/packages(/.*)?",
+        "/content/devinreactaem(/.*)?",
+        "/content/dam/devinreactaem(/.*)?",
+        "/content/experience-fragments/devinreactaem(/.*)?",
+        "/conf/devinreactaem(/.*)?"
+    ]
+}

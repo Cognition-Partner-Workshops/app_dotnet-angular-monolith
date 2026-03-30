@@ -1,0 +1,27 @@
+<sly data-sly-use.model="com.devin.aem.core.models.TabsModel"/>
+<sly data-sly-test="${model}">
+    <div class="cmp-tabs cmp-tabs--${model.orientation}" data-component="tabs"
+         data-cmp-is="react-tabs"
+         data-cmp-active-tab="${model.activeTab}"
+         data-cmp-orientation="${model.orientation}">
+        <ol class="cmp-tabs__tablist" role="tablist" aria-label="Tabs">
+            <sly data-sly-list.tab="${model.tabs}">
+                <li class="cmp-tabs__tab" role="tab"
+                    data-cmp-hook-tabs="tab"
+                    aria-selected="${itemList.first ? 'true' : 'false'}">
+                    <span class="cmp-tabs__tab-icon" data-sly-test="${tab.icon}">
+                        <i class="${tab.icon}"></i>
+                    </span>
+                    ${tab.title}
+                </li>
+            </sly>
+        </ol>
+        <sly data-sly-list.tab="${model.tabs}">
+            <div class="cmp-tabs__tabpanel" role="tabpanel"
+                 data-cmp-hook-tabs="tabpanel"
+                 aria-hidden="${itemList.first ? 'false' : 'true'}">
+                ${tab.content @ context='html'}
+            </div>
+        </sly>
+    </div>
+</sly>

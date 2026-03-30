@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:jcr="http://www.jcp.org/jcr/1.0"
+          xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
+          xmlns:granite="http://www.adobe.com/jcr/granite/1.0"
+    jcr:primaryType="dam:ContentFragmentModel"
+    jcr:title="Team Member"
+    jcr:description="Content Fragment Model for team member profiles"
+    sling:resourceType="dam/cfm/models/console/components/data/entity/default">
+    <model jcr:primaryType="nt:unstructured"
+           dataTypesConfig="/mnt/overlay/settings/dam/cfm/models/formbuilderconfig/datatypes"
+           sling:resourceType="wcm/scaffolding/components/scaffolding">
+        <items jcr:primaryType="nt:unstructured">
+            <fullName jcr:primaryType="nt:unstructured"
+                      fieldLabel="Full Name"
+                      name="fullName"
+                      metaType="text-single"
+                      required="{Boolean}true"
+                      sling:resourceType="granite/ui/components/coral/foundation/form/textfield"/>
+            <jobTitle jcr:primaryType="nt:unstructured"
+                      fieldLabel="Job Title"
+                      name="jobTitle"
+                      metaType="text-single"
+                      sling:resourceType="granite/ui/components/coral/foundation/form/textfield"/>
+            <department jcr:primaryType="nt:unstructured"
+                        fieldLabel="Department"
+                        name="department"
+                        metaType="text-single"
+                        sling:resourceType="granite/ui/components/coral/foundation/form/textfield"/>
+            <bio jcr:primaryType="nt:unstructured"
+                 fieldLabel="Bio"
+                 name="bio"
+                 metaType="text-multi"
+                 sling:resourceType="granite/ui/components/coral/foundation/form/textarea"/>
+            <photo jcr:primaryType="nt:unstructured"
+                   fieldLabel="Photo"
+                   name="photo"
+                   metaType="content-reference"
+                   rootPath="/content/dam"
+                   sling:resourceType="granite/ui/components/coral/foundation/form/pathfield"/>
+            <email jcr:primaryType="nt:unstructured"
+                   fieldLabel="Email"
+                   name="email"
+                   metaType="text-single"
+                   sling:resourceType="granite/ui/components/coral/foundation/form/textfield"/>
+            <linkedIn jcr:primaryType="nt:unstructured"
+                      fieldLabel="LinkedIn URL"
+                      name="linkedIn"
+                      metaType="text-single"
+                      sling:resourceType="granite/ui/components/coral/foundation/form/textfield"/>
+        </items>
+    </model>
+</jcr:root>

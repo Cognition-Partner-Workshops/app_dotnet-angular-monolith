@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:jcr="http://www.jcp.org/jcr/1.0"
+          xmlns:cq="http://www.day.com/jcr/cq/1.0"
+          xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
+          xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
+    jcr:primaryType="cq:Page">
+    <jcr:content
+        jcr:primaryType="cq:PageContent"
+        jcr:title="English"
+        jcr:description="DevinReactAEM Homepage - A comprehensive React + AEM demo site"
+        sling:resourceType="devinreactaem/components/page"
+        cq:template="/apps/devinreactaem/templates/page-content"
+        navTitle="Home">
+        <root jcr:primaryType="nt:unstructured"
+              sling:resourceType="wcm/foundation/components/responsivegrid">
+            <hero jcr:primaryType="nt:unstructured"
+                  sling:resourceType="devinreactaem/components/hero"
+                  title="Welcome to DevinReactAEM"
+                  subtitle="A full-featured React + AEM project demonstrating custom components, workflows, content fragments, and more"
+                  ctaText="Explore Features"
+                  ctaLink="/content/devinreactaem/us/en/features.html"
+                  alignment="center"
+                  overlayEnabled="{Boolean}true"/>
+            <cardlist jcr:primaryType="nt:unstructured"
+                      sling:resourceType="devinreactaem/components/cardlist"
+                      title="Featured Content"
+                      layout="grid"
+                      maxItems="{Long}6"/>
+            <tabs jcr:primaryType="nt:unstructured"
+                  sling:resourceType="devinreactaem/components/tabs"
+                  orientation="horizontal">
+                <tabItems jcr:primaryType="nt:unstructured">
+                    <overview jcr:primaryType="nt:unstructured"
+                              tabTitle="Overview"
+                              tabContent="&lt;p&gt;DevinReactAEM is a comprehensive project showcasing React integration with Adobe Experience Manager. It includes custom components with HTL/Sightly templates backed by Sling Models, React-powered interactivity, and full AEM feature coverage.&lt;/p&gt;"/>
+                    <features jcr:primaryType="nt:unstructured"
+                              tabTitle="Features"
+                              tabContent="&lt;ul&gt;&lt;li&gt;15+ custom AEM components with HTL and React&lt;/li&gt;&lt;li&gt;Workflow process steps (approval, tagging, notification)&lt;/li&gt;&lt;li&gt;Content Fragment models and instances&lt;/li&gt;&lt;li&gt;Experience Fragments for header/footer&lt;/li&gt;&lt;li&gt;Sling Jobs for async processing&lt;/li&gt;&lt;li&gt;OSGi schedulers for automated tasks&lt;/li&gt;&lt;li&gt;Event listeners for page, replication, and DAM events&lt;/li&gt;&lt;/ul&gt;"/>
+                    <technology jcr:primaryType="nt:unstructured"
+                                tabTitle="Technology"
+                                tabContent="&lt;p&gt;Built with React 18, TypeScript, Java 11, OSGi, HTL/Sightly, Sling Models, and Webpack. Designed for AEM as a Cloud Service.&lt;/p&gt;"/>
+                </tabItems>
+            </tabs>
+            <accordion jcr:primaryType="nt:unstructured"
+                       sling:resourceType="devinreactaem/components/accordion"
+                       heading="Frequently Asked Questions"
+                       singleExpansion="{Boolean}true">
+                <items jcr:primaryType="nt:unstructured">
+                    <q1 jcr:primaryType="nt:unstructured"
+                        itemTitle="How do I deploy this project?"
+                        itemContent="&lt;p&gt;Use Maven to build: &lt;code&gt;mvn clean install -PautoInstallSinglePackage&lt;/code&gt;. This will deploy all modules to your local AEM Cloud SDK instance running on port 4502.&lt;/p&gt;"/>
+                    <q2 jcr:primaryType="nt:unstructured"
+                        itemTitle="What AEM version is required?"
+                        itemContent="&lt;p&gt;This project targets AEM as a Cloud Service SDK. Download the latest SDK from the Software Distribution portal.&lt;/p&gt;"/>
+                    <q3 jcr:primaryType="nt:unstructured"
+                        itemTitle="How does React integrate with AEM?"
+                        itemContent="&lt;p&gt;React components are built via Webpack in the ui.frontend module and output to AEM ClientLibs. HTL components include data attributes that React uses for hydration and progressive enhancement.&lt;/p&gt;"/>
+                </items>
+            </accordion>
+            <search jcr:primaryType="nt:unstructured"
+                    sling:resourceType="devinreactaem/components/search"
+                    searchRoot="/content/devinreactaem"
+                    resultsPerPage="{Long}10"/>
+        </root>
+    </jcr:content>
+</jcr:root>

@@ -1,0 +1,10 @@
+{
+    "scripts": [
+        "create service user devinreactaem-service with path system/devinreactaem",
+        "set ACL for devinreactaem-service",
+        "    allow jcr:read on /content/devinreactaem",
+        "    allow jcr:read,rep:write on /content/dam/devinreactaem",
+        "    allow jcr:read on /conf/devinreactaem",
+        "end"
+    ]
+}

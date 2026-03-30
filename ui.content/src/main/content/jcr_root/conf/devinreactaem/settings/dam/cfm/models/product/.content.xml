@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:jcr="http://www.jcp.org/jcr/1.0"
+          xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
+          xmlns:granite="http://www.adobe.com/jcr/granite/1.0"
+    jcr:primaryType="dam:ContentFragmentModel"
+    jcr:title="Product"
+    jcr:description="Content Fragment Model for product information"
+    sling:resourceType="dam/cfm/models/console/components/data/entity/default">
+    <model jcr:primaryType="nt:unstructured"
+           dataTypesConfig="/mnt/overlay/settings/dam/cfm/models/formbuilderconfig/datatypes"
+           sling:resourceType="wcm/scaffolding/components/scaffolding">
+        <items jcr:primaryType="nt:unstructured">
+            <productName jcr:primaryType="nt:unstructured"
+                         fieldLabel="Product Name"
+                         name="productName"
+                         metaType="text-single"
+                         required="{Boolean}true"
+                         sling:resourceType="granite/ui/components/coral/foundation/form/textfield"/>
+            <sku jcr:primaryType="nt:unstructured"
+                 fieldLabel="SKU"
+                 name="sku"
+                 metaType="text-single"
+                 sling:resourceType="granite/ui/components/coral/foundation/form/textfield"/>
+            <price jcr:primaryType="nt:unstructured"
+                   fieldLabel="Price"
+                   name="price"
+                   metaType="number"
+                   sling:resourceType="granite/ui/components/coral/foundation/form/numberfield"/>
+            <description jcr:primaryType="nt:unstructured"
+                         fieldLabel="Description"
+                         name="description"
+                         metaType="text-multi"
+                         sling:resourceType="granite/ui/components/coral/foundation/form/textarea"/>
+            <productImage jcr:primaryType="nt:unstructured"
+                          fieldLabel="Product Image"
+                          name="productImage"
+                          metaType="content-reference"
+                          rootPath="/content/dam"
+                          sling:resourceType="granite/ui/components/coral/foundation/form/pathfield"/>
+            <inStock jcr:primaryType="nt:unstructured"
+                     fieldLabel="In Stock"
+                     name="inStock"
+                     metaType="boolean"
+                     sling:resourceType="granite/ui/components/coral/foundation/form/checkbox"
+                     text="Available"
+                     value="{Boolean}true"/>
+            <category jcr:primaryType="nt:unstructured"
+                      fieldLabel="Category"
+                      name="category"
+                      metaType="enumeration"
+                      sling:resourceType="granite/ui/components/coral/foundation/form/select">
+                <items jcr:primaryType="nt:unstructured">
+                    <electronics jcr:primaryType="nt:unstructured" text="Electronics" value="electronics"/>
+                    <clothing jcr:primaryType="nt:unstructured" text="Clothing" value="clothing"/>
+                    <home jcr:primaryType="nt:unstructured" text="Home &amp; Garden" value="home"/>
+                    <sports jcr:primaryType="nt:unstructured" text="Sports" value="sports"/>
+                </items>
+            </category>
+        </items>
+    </model>
+</jcr:root>

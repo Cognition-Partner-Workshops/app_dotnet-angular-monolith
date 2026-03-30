@@ -1,0 +1,6 @@
+{
+    "searchRootPath": "/content/devinreactaem",
+    "defaultResultsLimit": 10,
+    "maxResultsLimit": 50,
+    "enableFullTextSearch": true
+}

@@ -1,0 +1,143 @@
+/* React-specific styles that complement the AEM base styles */
+
+.devinreactaem-app {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* React component loading states */
+.react-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    color: #999;
+}
+
+.react-loading__spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid #e0e0e0;
+    border-top: 3px solid #0066cc;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 12px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Search autocomplete */
+.react-search-autocomplete {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    z-index: 100;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.react-search-autocomplete__item {
+    padding: 10px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background 0.15s;
+}
+
+.react-search-autocomplete__item:hover {
+    background: #f0f7ff;
+}
+
+.react-search-autocomplete__item-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.react-search-autocomplete__item-path {
+    font-size: 0.8rem;
+    color: #999;
+    margin-top: 2px;
+}
+
+/* Form validation states */
+.react-form-field--error input,
+.react-form-field--error textarea {
+    border-color: #dc3545 !important;
+}
+
+.react-form-field__error-message {
+    color: #dc3545;
+    font-size: 0.85rem;
+    margin-top: 4px;
+}
+
+.react-form-field--success input,
+.react-form-field--success textarea {
+    border-color: #28a745 !important;
+}
+
+.react-form__success-message {
+    background: #d4edda;
+    color: #155724;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin-top: 16px;
+}
+
+.react-form__error-message {
+    background: #f8d7da;
+    color: #721c24;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin-top: 16px;
+}
+
+/* Content Fragment card */
+.react-cf-card {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    transition: box-shadow 0.3s;
+}
+
+.react-cf-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+}
+
+.react-cf-card__title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.react-cf-card__meta {
+    font-size: 0.85rem;
+    color: #999;
+    margin-bottom: 12px;
+}
+
+.react-cf-card__body {
+    font-size: 0.95rem;
+    color: #666;
+    line-height: 1.6;
+}
+
+/* Lazy loading fade-in */
+.react-lazy-enter {
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+.react-lazy-enter-active {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.3s, transform 0.3s;
+}

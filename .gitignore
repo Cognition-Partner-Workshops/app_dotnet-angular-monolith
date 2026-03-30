@@ -1,0 +1,35 @@
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+*.sublime-workspace
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+.pnp/
+.pnp.js
+
+# OS
+.DS_Store
+Thumbs.db
+
+# AEM
+crx-quickstart/
+*.jar
+
+# Build
+dist/
+build/

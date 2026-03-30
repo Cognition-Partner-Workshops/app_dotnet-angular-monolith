@@ -1,0 +1,27 @@
+<sly data-sly-use.properties="com.devin.aem.core.models.HeroModel"/>
+<div class="cmp-modal" data-component="modal" data-cmp-is="react-modal"
+     data-cmp-trigger="${properties.triggerSelector || ''}"
+     data-cmp-close-on-overlay="${properties.closeOnOverlay || 'true'}">
+    <button class="cmp-modal__trigger" data-cmp-hook-modal="trigger" type="button">
+        ${properties.triggerText || 'Open Modal'}
+    </button>
+    <div class="cmp-modal__overlay" data-cmp-hook-modal="overlay" hidden="hidden">
+        <div class="cmp-modal__dialog" role="dialog" aria-modal="true" data-cmp-hook-modal="dialog">
+            <div class="cmp-modal__header">
+                <h2 class="cmp-modal__title">${properties.modalTitle || 'Modal'}</h2>
+                <button class="cmp-modal__close" data-cmp-hook-modal="close" aria-label="Close">
+                    &times;
+                </button>
+            </div>
+            <div class="cmp-modal__body">
+                ${properties.modalContent @ context='html'}
+            </div>
+            <div class="cmp-modal__footer" data-sly-test="${properties.showFooter}">
+                <button class="cmp-modal__action cmp-modal__action--secondary"
+                        data-cmp-hook-modal="close">Cancel</button>
+                <button class="cmp-modal__action cmp-modal__action--primary"
+                        data-cmp-hook-modal="confirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>

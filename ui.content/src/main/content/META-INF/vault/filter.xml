@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<workspaceFilter version="1.0">
+    <filter root="/content/devinreactaem" mode="merge"/>
+    <filter root="/content/experience-fragments/devinreactaem" mode="merge"/>
+    <filter root="/content/dam/devinreactaem" mode="merge"/>
+    <filter root="/conf/devinreactaem" mode="merge"/>
+</workspaceFilter>

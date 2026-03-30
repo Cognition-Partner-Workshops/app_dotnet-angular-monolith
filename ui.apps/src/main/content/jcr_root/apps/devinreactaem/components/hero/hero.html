@@ -1,0 +1,21 @@
+<sly data-sly-use.model="com.devin.aem.core.models.HeroModel"/>
+<sly data-sly-test="${model}">
+    <section class="${model.heroClass}" data-component="hero"
+             data-cmp-is="react-hero"
+             data-cmp-title="${model.title}"
+             data-cmp-subtitle="${model.subtitle}"
+             data-cmp-cta-text="${model.ctaText}"
+             data-cmp-cta-link="${model.ctaLink}">
+        <div class="hero__background" data-sly-test="${model.backgroundImage}">
+            <img src="${model.backgroundImage}" alt="${model.title}" class="hero__image" loading="eager"/>
+        </div>
+        <div class="hero__content">
+            <h1 class="hero__title" data-sly-test="${model.title}">${model.title}</h1>
+            <p class="hero__subtitle" data-sly-test="${model.subtitle}">${model.subtitle}</p>
+            <a class="hero__cta" href="${model.ctaLink}" data-sly-test="${model.ctaText && model.ctaLink}">
+                ${model.ctaText}
+            </a>
+        </div>
+        <div class="hero__overlay" data-sly-test="${model.overlayEnabled}"></div>
+    </section>
+</sly>

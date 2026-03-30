@@ -1,0 +1,6 @@
+{
+    "contentRootPath": "/content/devinreactaem",
+    "maxResults": 100,
+    "cacheEnabled": true,
+    "cacheTtlSeconds": 300
+}
