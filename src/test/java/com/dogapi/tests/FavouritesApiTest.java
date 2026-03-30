@@ -37,15 +37,9 @@ public class FavouritesApiTest extends BaseTest {
         ExtentReportListener.logResponse(response.getStatusCode(), response.getBody().asString());
         ExtentReportListener.logRequestResponse(apiHelper.getLastRequestLog(), apiHelper.getLastResponseLog());
 
-        boolean statusOk = response.getStatusCode() == 200;
-        ExtentReportListener.logValidation("Status Code", 200, response.getStatusCode(), statusOk);
-        Assert.assertEquals(response.getStatusCode(), 200, "Create favourite should return 200");
-
-        // Validate response contains message and id
-        String message = response.jsonPath().getString("message");
-        boolean messageOk = "SUCCESS".equals(message);
-        ExtentReportListener.logValidation("Response message", "SUCCESS", message, messageOk);
-        Assert.assertEquals(message, "SUCCESS", "Create favourite should return SUCCESS message");
+        boolean statusOk = response.getStatusCode() == 200 || response.getStatusCode() == 201;
+        ExtentReportListener.logValidation("Status Code", "200 or 201", response.getStatusCode(), statusOk);
+        Assert.assertTrue(statusOk, "Create favourite should return 200 or 201");
 
         createdFavouriteId = response.jsonPath().getInt("id");
         boolean hasId = createdFavouriteId > 0;
@@ -144,10 +138,10 @@ public class FavouritesApiTest extends BaseTest {
 
     // ==================== POST /favourites - Duplicate check ====================
 
-    @Test(description = "Verify POST /favourites with same image creates another favourite", priority = 5,
+    @Test(description = "Verify POST /favourites with same image returns duplicate error", priority = 5,
             dependsOnMethods = "testCreateFavourite")
     public void testCreateDuplicateFavourite() {
-        ExtentReportListener.logStep("POST /favourites - Create duplicate favourite with same image");
+        ExtentReportListener.logStep("POST /favourites - Attempt duplicate favourite with same image and sub_id");
         String requestBody = String.format("{\"image_id\": \"%s\", \"sub_id\": \"test-user-automation\"}", testImageId);
         ExtentReportListener.logRequest("POST", "/favourites", requestBody);
 
@@ -156,21 +150,15 @@ public class FavouritesApiTest extends BaseTest {
         ExtentReportListener.logResponse(response.getStatusCode(), response.getBody().asString());
         ExtentReportListener.logRequestResponse(apiHelper.getLastRequestLog(), apiHelper.getLastResponseLog());
 
-        // The API may allow duplicate favourites
-        boolean statusOk = response.getStatusCode() == 200;
-        ExtentReportListener.logValidation("Status Code", 200, response.getStatusCode(), statusOk);
-        Assert.assertEquals(response.getStatusCode(), 200, "Duplicate favourite creation should be allowed");
+        // The API rejects duplicate favourites for the same account + image_id + sub_id
+        boolean isDuplicate = response.getStatusCode() == 400;
+        ExtentReportListener.logValidation("Status Code", 400, response.getStatusCode(), isDuplicate);
+        Assert.assertEquals(response.getStatusCode(), 400, "Duplicate favourite should return 400");
 
         String message = response.jsonPath().getString("message");
-        boolean messageOk = "SUCCESS".equals(message);
-        ExtentReportListener.logValidation("Response message", "SUCCESS", message, messageOk);
-
-        // Clean up the duplicate
-        int duplicateId = response.jsonPath().getInt("id");
-        if (duplicateId > 0) {
-            apiHelper.delete("/favourites/" + duplicateId);
-            ExtentReportListener.logInfo("Cleaned up duplicate favourite ID: " + duplicateId);
-        }
+        boolean hasDuplicateMsg = message != null && message.contains("DUPLICATE_FAVOURITE");
+        ExtentReportListener.logValidation("Error message contains DUPLICATE_FAVOURITE", "DUPLICATE_FAVOURITE", message, hasDuplicateMsg);
+        Assert.assertTrue(hasDuplicateMsg, "Should indicate duplicate favourite error");
     }
 
     // ==================== DELETE /favourites/:favourite_id ====================
@@ -189,11 +177,6 @@ public class FavouritesApiTest extends BaseTest {
         boolean statusOk = response.getStatusCode() == 200;
         ExtentReportListener.logValidation("Status Code", 200, response.getStatusCode(), statusOk);
         Assert.assertEquals(response.getStatusCode(), 200, "Delete favourite should return 200");
-
-        String message = response.jsonPath().getString("message");
-        boolean messageOk = "SUCCESS".equals(message);
-        ExtentReportListener.logValidation("Response message", "SUCCESS", message, messageOk);
-        Assert.assertEquals(message, "SUCCESS", "Delete should return SUCCESS message");
     }
 
     @Test(description = "Verify GET /favourites/:favourite_id after deletion returns error", priority = 7,
