@@ -1,10 +1,26 @@
-bin/
-obj/
-*.user
-*.suo
-.vs/
-node_modules/
-dist/
-.angular/
-*.db
-appsettings.Development.json
+# Maven
+target/
+*.jar
+*.war
+*.ear
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test Reports (generated)
+test-output/
+reports/
+
+# Logs
+*.log

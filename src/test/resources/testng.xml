@@ -1,0 +1,40 @@
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="The Dog API - Test Automation Suite" verbose="2">
+
+    <listeners>
+        <listener class-name="com.dogapi.listeners.ExtentReportListener"/>
+    </listeners>
+
+    <!-- Test Group 1: Individual API Endpoint Tests -->
+    <test name="Breeds API Tests">
+        <classes>
+            <class name="com.dogapi.tests.BreedsApiTest"/>
+        </classes>
+    </test>
+
+    <test name="Images API Tests">
+        <classes>
+            <class name="com.dogapi.tests.ImagesApiTest"/>
+        </classes>
+    </test>
+
+    <test name="Favourites API Tests">
+        <classes>
+            <class name="com.dogapi.tests.FavouritesApiTest"/>
+        </classes>
+    </test>
+
+    <test name="Votes API Tests">
+        <classes>
+            <class name="com.dogapi.tests.VotesApiTest"/>
+        </classes>
+    </test>
+
+    <!-- Test Group 2: End-to-End Flow Tests -->
+    <test name="E2E Flow Tests">
+        <classes>
+            <class name="com.dogapi.tests.E2EFlowTest"/>
+        </classes>
+    </test>
+
+</suite>
