@@ -33,3 +33,14 @@ crx-quickstart/
 # Build
 dist/
 build/
+
+# .NET (from original monolith)
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.angular/
+*.db
+appsettings.Development.json
+package-lock.json
