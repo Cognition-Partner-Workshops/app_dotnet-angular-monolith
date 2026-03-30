@@ -14,6 +14,7 @@ release.properties
 .classpath
 .settings/
 *.sublime-workspace
+.factorypath
 
 # Node
 node_modules/

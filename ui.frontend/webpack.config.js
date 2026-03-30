@@ -43,18 +43,9 @@ module.exports = (env, argv) => {
             new MiniCssExtractPlugin({
                 filename: 'css/[name].css',
             }),
-            new CopyWebpackPlugin({
-                patterns: [
-                    {
-                        from: path.resolve(__dirname, 'dist'),
-                        to: path.resolve(
-                            __dirname,
-                            '../ui.apps/src/main/content/jcr_root/apps/devinreactaem/clientlibs/clientlib-react'
-                        ),
-                        noErrorOnMissing: true,
-                    },
-                ],
-            }),
+            // Note: The frontend-maven-plugin handles copying build output to the
+            // clientlib-react folder during the Maven build lifecycle.
+            // For local dev, run: npm run build && cp -r dist/* ../ui.apps/src/main/content/jcr_root/apps/devinreactaem/clientlibs/clientlib-react/
         ],
         devServer: {
             port: 3000,
