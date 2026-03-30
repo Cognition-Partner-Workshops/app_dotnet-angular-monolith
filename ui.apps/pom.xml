@@ -23,6 +23,7 @@
             <plugin>
                 <groupId>org.apache.jackrabbit</groupId>
                 <artifactId>filevault-package-maven-plugin</artifactId>
+                <extensions>true</extensions>
                 <configuration>
                     <group>com.devin.aem</group>
                     <name>devinreactaem.ui.apps</name>
