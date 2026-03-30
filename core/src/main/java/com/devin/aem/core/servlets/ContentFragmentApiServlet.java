@@ -8,7 +8,7 @@ import com.google.gson.JsonObject;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.servlets.HttpConstants;
-import org.apache.sling.api.servlets.SlingSafeMethodServlet;
+import org.apache.sling.api.servlets.SlingSafeMethodsServlet;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
@@ -24,7 +24,7 @@ import java.util.Map;
     "sling.servlet.paths=/bin/devinreactaem/contentfragments",
     "sling.servlet.methods=" + HttpConstants.METHOD_GET
 })
-public class ContentFragmentApiServlet extends SlingSafeMethodServlet {
+public class ContentFragmentApiServlet extends SlingSafeMethodsServlet {
 
     private static final Logger LOG = LoggerFactory.getLogger(ContentFragmentApiServlet.class);
 

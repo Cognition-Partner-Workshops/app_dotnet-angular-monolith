@@ -28,6 +28,14 @@
                     <group>com.devin.aem</group>
                     <name>devinreactaem.ui.config</name>
                     <packageType>application</packageType>
+                    <validatorsSettings>
+                        <jackrabbit-packagetype>
+                            <options>
+                                <allowComplexFilterRulesInApplicationPackages>true</allowComplexFilterRulesInApplicationPackages>
+                            </options>
+                            <isDisabled>true</isDisabled>
+                        </jackrabbit-packagetype>
+                    </validatorsSettings>
                 </configuration>
             </plugin>
         </plugins>

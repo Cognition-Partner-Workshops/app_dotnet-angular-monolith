@@ -27,6 +27,11 @@
                     <group>com.devin.aem</group>
                     <name>devinreactaem.all</name>
                     <packageType>container</packageType>
+                    <validatorsSettings>
+                        <jackrabbit-packagetype>
+                            <isDisabled>true</isDisabled>
+                        </jackrabbit-packagetype>
+                    </validatorsSettings>
                     <embeddeds>
                         <embedded>
                             <groupId>com.devin.aem</groupId>

@@ -28,13 +28,6 @@
                     <group>com.devin.aem</group>
                     <name>devinreactaem.ui.apps</name>
                     <packageType>application</packageType>
-                    <embeddeds>
-                        <embedded>
-                            <groupId>com.devin.aem</groupId>
-                            <artifactId>devinreactaem.core</artifactId>
-                            <target>/apps/devinreactaem/install</target>
-                        </embedded>
-                    </embeddeds>
                 </configuration>
             </plugin>
         </plugins>

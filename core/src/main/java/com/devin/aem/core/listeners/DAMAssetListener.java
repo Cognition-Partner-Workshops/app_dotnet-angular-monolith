@@ -34,8 +34,8 @@ public class DAMAssetListener implements EventHandler {
                     LOG.info("New asset uploaded: {}", assetPath);
                     onAssetCreated(assetPath);
                     break;
-                case ASSET_MODIFIED:
-                    LOG.info("Asset modified: {}", assetPath);
+                case ORIGINAL_UPDATED:
+                    LOG.info("Asset modified (original updated): {}", assetPath);
                     break;
                 case ASSET_REMOVED:
                     LOG.info("Asset removed: {}", assetPath);
