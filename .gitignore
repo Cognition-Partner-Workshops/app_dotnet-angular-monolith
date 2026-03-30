@@ -1,4 +1,15 @@
-# Maven
+bin/
+obj/
+*.user
+*.suo
+.vs/
+node_modules/
+dist/
+.angular/
+*.db
+appsettings.Development.json
+
+# Maven / Java
 target/
 *.jar
 *.war
@@ -13,6 +24,7 @@ target/
 .classpath
 *.swp
 *.swo
+.factorypath
 
 # OS
 .DS_Store
