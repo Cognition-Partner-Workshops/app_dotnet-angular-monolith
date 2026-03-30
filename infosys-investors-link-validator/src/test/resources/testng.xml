@@ -1,0 +1,46 @@
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="Infosys Investors Link Validation Suite" verbose="1">
+
+    <test name="Page Load Validation">
+        <classes>
+            <class name="com.infosys.test.investors.InvestorPageLinkExistenceTest"/>
+        </classes>
+    </test>
+
+    <test name="HTTP Link Validation">
+        <classes>
+            <class name="com.infosys.test.investors.LinkHttpValidationTest"/>
+        </classes>
+    </test>
+
+    <test name="Investor Section Links Navigation">
+        <classes>
+            <class name="com.infosys.test.investors.InvestorSectionLinksNavigationTest"/>
+        </classes>
+    </test>
+
+    <test name="Header Navigation Links">
+        <classes>
+            <class name="com.infosys.test.investors.HeaderNavigationLinksTest"/>
+        </classes>
+    </test>
+
+    <test name="Footer Links Navigation">
+        <classes>
+            <class name="com.infosys.test.investors.FooterLinksNavigationTest"/>
+        </classes>
+    </test>
+
+    <test name="Social Media Links">
+        <classes>
+            <class name="com.infosys.test.investors.SocialMediaLinksTest"/>
+        </classes>
+    </test>
+
+    <test name="Document Download Links">
+        <classes>
+            <class name="com.infosys.test.investors.DocumentDownloadLinksTest"/>
+        </classes>
+    </test>
+
+</suite>
