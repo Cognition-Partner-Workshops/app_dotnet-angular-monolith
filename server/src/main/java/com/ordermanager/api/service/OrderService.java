@@ -52,6 +52,7 @@ public class OrderService {
 
         CustomerOrder order = new CustomerOrder();
         order.setCustomer(customer);
+        order.setCustomerId(customer.getId());
         order.setShippingAddress(String.format("%s, %s, %s %s",
                 Objects.toString(customer.getAddress(), ""),
                 Objects.toString(customer.getCity(), ""),
@@ -87,6 +88,7 @@ public class OrderService {
             OrderItem orderItem = new OrderItem();
             orderItem.setOrder(order);
             orderItem.setProduct(product);
+            orderItem.setProductId(product.getId());
             orderItem.setQuantity(itemData.quantity());
             orderItem.setUnitPrice(product.getPrice());
             order.getItems().add(orderItem);
@@ -98,7 +100,9 @@ public class OrderService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         order.setTotalAmount(total);
 
-        return orderRepository.save(order);
+        CustomerOrder saved = orderRepository.save(order);
+        saved.getItems().forEach(item -> item.setOrderId(saved.getId()));
+        return saved;
     }
 
     @Transactional
