@@ -72,6 +72,16 @@ builder.Services.AddAuthentication(options =>
                 context.Token = accessToken;
             }
             return Task.CompletedTask;
+        },
+        OnChallenge = context =>
+        {
+            // Suppress the WWW-Authenticate: Bearer header on 401 responses
+            // to prevent browsers from showing a native Basic Auth popup
+            // when behind a reverse proxy that also uses Basic Auth
+            context.HandleResponse();
+            context.Response.StatusCode = 401;
+            context.Response.ContentType = "application/json";
+            return context.Response.WriteAsync("{\"error\":\"Unauthorized\"}");
         }
     };
 });
