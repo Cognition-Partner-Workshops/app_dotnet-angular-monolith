@@ -12,6 +12,7 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 @Entity
 @Table(name = "inventory_items")
@@ -39,7 +40,7 @@ public class InventoryItem {
     private String warehouseLocation;
 
     @Column(name = "last_restocked", nullable = false)
-    private LocalDateTime lastRestocked = LocalDateTime.now();
+    private LocalDateTime lastRestocked = LocalDateTime.now(ZoneOffset.UTC);
 
     public InventoryItem() {
     }

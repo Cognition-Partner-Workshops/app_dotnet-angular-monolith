@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,7 +37,7 @@ public class InventoryService {
                 .orElseThrow(() -> new IllegalArgumentException(
                         "No inventory record for product " + productId));
         item.setQuantityOnHand(item.getQuantityOnHand() + quantity);
-        item.setLastRestocked(LocalDateTime.now());
+        item.setLastRestocked(LocalDateTime.now(ZoneOffset.UTC));
         return inventoryItemRepository.save(item);
     }
 
