@@ -1,6 +1,6 @@
 # OrderManager Monolith
 
-A .NET 8 + Angular 17 monolith application demonstrating tightly coupled modules sharing a single database. This is the **"before"** state for monolith-to-microservices decomposition demos.
+A Java Spring Boot 3 + Angular 17 monolith application demonstrating tightly coupled modules sharing a single database. This is the **"before"** state for monolith-to-microservices decomposition demos.
 
 ## Architecture
 
@@ -13,35 +13,80 @@ The application contains four tightly coupled modules:
 | **Customers** | Customer profiles, addresses, preferences |
 | **Inventory** | Stock levels, warehouse locations, reorder |
 
-All modules share a single SQLite database and are deployed as one unit.
+All modules share a single H2 database and are deployed as one unit.
 
 ## Tech Stack
 
-- **Backend**: .NET 8, C#, Entity Framework Core, SQLite
+- **Backend**: Java 17, Spring Boot 3.2, Spring Data JPA, H2 Database
 - **Frontend**: Angular 17, TypeScript
-- **API**: RESTful with Swagger/OpenAPI
+- **API**: RESTful with OpenAPI/Swagger (SpringDoc)
+- **Build**: Maven
 
 ## Getting Started
 
 ### Prerequisites
-- .NET 8 SDK
+- Java 17+
+- Maven 3.8+
 - Node.js 18+
 - Angular CLI (`npm install -g @angular/cli`)
 
 ### Run the application
 
 ```bash
-# Restore .NET dependencies
-dotnet restore src/OrderManager.Api/OrderManager.Api.csproj
+# Build the Angular frontend
+cd client-app && npm install && ng build && cd ..
 
-# Install Angular dependencies
-cd client-app && npm install && cd ..
-
-# Run the API (serves Angular app too)
-dotnet run --project src/OrderManager.Api/OrderManager.Api.csproj
+# Run the Spring Boot API (serves Angular app too)
+cd server && mvn spring-boot:run
 ```
 
-The application will be available at `https://localhost:5001`.
+The application will be available at `http://localhost:5001`.
+
+### Run tests
+
+```bash
+cd server && mvn test
+```
+
+### API Documentation
+
+Swagger UI is available at `http://localhost:5001/swagger-ui.html` when the application is running.
+
+## Project Structure
+
+```
+.
+├── client-app/              # Angular 17 frontend
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── modules/     # Feature modules (orders, products, customers, inventory)
+│   │   │   ├── app.component.ts
+│   │   │   └── app.routes.ts
+│   │   ├── environments/
+│   │   ├── index.html
+│   │   └── main.ts
+│   ├── angular.json
+│   ├── package.json
+│   └── tsconfig.json
+├── server/                  # Spring Boot backend
+│   ├── src/
+│   │   ├── main/
+│   │   │   ├── java/com/ordermanager/api/
+│   │   │   │   ├── config/       # CORS, Web, DataSeeder
+│   │   │   │   ├── controller/   # REST controllers
+│   │   │   │   ├── dto/          # Request DTOs
+│   │   │   │   ├── model/        # JPA entities
+│   │   │   │   ├── repository/   # Spring Data repositories
+│   │   │   │   ├── service/      # Business logic
+│   │   │   │   └── OrderManagerApplication.java
+│   │   │   └── resources/
+│   │   │       └── application.properties
+│   │   └── test/
+│   │       └── java/com/ordermanager/api/
+│   │           └── service/      # Service tests
+│   └── pom.xml
+└── README.md
+```
 
 ## Decomposition Targets
 

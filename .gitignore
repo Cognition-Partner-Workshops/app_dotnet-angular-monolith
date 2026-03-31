@@ -1,10 +1,39 @@
-bin/
-obj/
-*.user
-*.suo
-.vs/
+# Java
+*.class
+*.jar
+*.war
+*.ear
+target/
+*.log
+
+# Maven
+.mvn/
+mvnw
+mvnw.cmd
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+
+# H2 Database
+*.mv.db
+*.trace.db
+
+# Node / Angular
 node_modules/
 dist/
 .angular/
-*.db
-appsettings.Development.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Spring Boot
+*.pid
