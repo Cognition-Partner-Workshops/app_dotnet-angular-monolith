@@ -1,21 +1,22 @@
 package com.devin.aem.core.listeners;
 
 import org.apache.sling.api.resource.observation.ResourceChange;
+import org.apache.sling.api.resource.observation.ResourceChangeListener;
 import org.osgi.service.component.annotations.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
-@Component(service = org.apache.sling.api.resource.observation.ResourceChangeListener.class, immediate = true, property = {
-    org.apache.sling.api.resource.observation.ResourceChangeListener.PATHS + "=/content/devinreactaem",
-    org.apache.sling.api.resource.observation.ResourceChangeListener.CHANGES + "=ADDED",
-    org.apache.sling.api.resource.observation.ResourceChangeListener.CHANGES + "=CHANGED",
-    org.apache.sling.api.resource.observation.ResourceChangeListener.CHANGES + "=REMOVED"
+@Component(service = ResourceChangeListener.class, immediate = true, property = {
+    ResourceChangeListener.PATHS + "=/content/devinreactaem",
+    ResourceChangeListener.CHANGES + "=ADDED",
+    ResourceChangeListener.CHANGES + "=CHANGED",
+    ResourceChangeListener.CHANGES + "=REMOVED"
 })
-public class ResourceChangeListener implements org.apache.sling.api.resource.observation.ResourceChangeListener {
+public class DevinResourceChangeListener implements ResourceChangeListener {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ResourceChangeListener.class);
+    private static final Logger LOG = LoggerFactory.getLogger(DevinResourceChangeListener.class);
 
     @Override
     public void onChange(List<ResourceChange> changes) {

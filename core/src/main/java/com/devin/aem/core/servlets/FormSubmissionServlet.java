@@ -71,7 +71,17 @@ public class FormSubmissionServlet extends SlingAllMethodsServlet {
     private boolean isValidInput(String name, String value) {
         if (name == null || name.trim().isEmpty()) return false;
         if (value != null && value.length() > 10000) return false;
-        if (value != null && (value.contains("<script>") || value.contains("javascript:"))) return false;
+        if (value != null) {
+            String lower = value.toLowerCase();
+            if (lower.contains("<script") || lower.contains("javascript:") ||
+                lower.contains("<iframe") || lower.contains("<img") ||
+                lower.contains("<svg") || lower.contains("<object") ||
+                lower.contains("<embed") || lower.contains("<form") ||
+                lower.contains("onerror=") || lower.contains("onload=") ||
+                lower.contains("onclick=") || lower.contains("onmouseover=")) {
+                return false;
+            }
+        }
         return true;
     }
 }
