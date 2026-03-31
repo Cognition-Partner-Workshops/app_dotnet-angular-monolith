@@ -11,7 +11,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
-            "outputPath": "../server/src/main/resources/static",
+            "outputPath": { "base": "../server/src/main/resources/static", "browser": "" },
             "index": "src/index.html",
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json"
