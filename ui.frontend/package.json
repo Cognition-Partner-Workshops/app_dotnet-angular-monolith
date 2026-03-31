@@ -4,7 +4,7 @@
   "description": "React 18 frontend for DevinReactAEM project with AEM integration",
   "private": true,
   "scripts": {
-    "build": "webpack --mode production",
+    "build": "webpack --mode production && node sync-clientlibs.js",
     "dev": "webpack --mode development --watch",
     "start": "webpack serve --mode development",
     "lint": "eslint src --ext .ts,.tsx",
