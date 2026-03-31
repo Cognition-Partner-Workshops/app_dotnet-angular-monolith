@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @Transactional(readOnly = true)
@@ -52,8 +53,10 @@ public class OrderService {
         CustomerOrder order = new CustomerOrder();
         order.setCustomer(customer);
         order.setShippingAddress(String.format("%s, %s, %s %s",
-                customer.getAddress(), customer.getCity(),
-                customer.getState(), customer.getZipCode()));
+                Objects.toString(customer.getAddress(), ""),
+                Objects.toString(customer.getCity(), ""),
+                Objects.toString(customer.getState(), ""),
+                Objects.toString(customer.getZipCode(), "")));
 
         for (OrderItemData itemData : items) {
             if (itemData.productId() == null) {
