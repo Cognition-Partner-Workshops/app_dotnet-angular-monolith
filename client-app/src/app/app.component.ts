@@ -1,39 +1,41 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterOutlet, RouterLink, Router } from '@angular/router';
+import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from './services/auth.service';
 import { OfflineService } from './services/offline.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, RouterOutlet, RouterLink],
+  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
   template: `
-    <!-- Offline Status Banner -->
-    <div *ngIf="!isOnline" class="offline-status-bar">
-      <span>No internet connection - Offline Mode</span>
+    <div class="app-wrapper">
+      <div *ngIf="!isOnline" class="offline-status-bar">
+        No internet connection - Offline Mode
+      </div>
+
+      <router-outlet></router-outlet>
+
+      <nav *ngIf="isAuthenticated" class="bottom-nav">
+        <a [routerLink]="['/reels']" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">&#127910;</span>
+          <span class="nav-label">Reels</span>
+        </a>
+        <a [routerLink]="['/calls']" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">&#128222;</span>
+          <span class="nav-label">Calls</span>
+        </a>
+        <a [routerLink]="['/profile']" routerLinkActive="active" class="nav-item">
+          <span class="nav-icon">&#128100;</span>
+          <span class="nav-label">Profile</span>
+        </a>
+      </nav>
     </div>
-
-    <router-outlet></router-outlet>
-
-    <!-- Bottom Navigation (only when authenticated) -->
-    <nav *ngIf="isAuthenticated" class="bottom-nav">
-      <a routerLink="/reels" class="nav-item" [class.active]="isActive('/reels')">
-        <span class="nav-icon">&#127910;</span>
-        <span class="nav-label">Reels</span>
-      </a>
-      <a routerLink="/calls" class="nav-item" [class.active]="isActive('/calls')">
-        <span class="nav-icon">&#128222;</span>
-        <span class="nav-label">Calls</span>
-      </a>
-      <a routerLink="/profile" class="nav-item" [class.active]="isActive('/profile')">
-        <span class="nav-icon">&#128100;</span>
-        <span class="nav-label">Profile</span>
-      </a>
-    </nav>
   `,
   styles: [`
     :host { display: block; }
+    .app-wrapper { min-height: 100vh; }
     .offline-status-bar {
       position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
       background: #ff6b35; color: white; text-align: center;
@@ -56,23 +58,25 @@ import { OfflineService } from './services/offline.service';
     .nav-label { font-size: 0.7em; }
   `]
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy {
   title = 'TrainConnect';
   isOnline = true;
   isAuthenticated = false;
+  private subs: Subscription[] = [];
 
   constructor(
     private authService: AuthService,
-    private offlineService: OfflineService,
-    private router: Router
+    private offlineService: OfflineService
   ) {}
 
   ngOnInit(): void {
-    this.offlineService.isOnline$.subscribe(online => this.isOnline = online);
-    this.authService.currentUser$.subscribe(user => this.isAuthenticated = !!user);
+    this.subs.push(
+      this.offlineService.isOnline$.subscribe(online => this.isOnline = online),
+      this.authService.currentUser$.subscribe(user => this.isAuthenticated = !!user)
+    );
   }
 
-  isActive(path: string): boolean {
-    return this.router.url.startsWith(path);
+  ngOnDestroy(): void {
+    this.subs.forEach(s => s.unsubscribe());
   }
 }
