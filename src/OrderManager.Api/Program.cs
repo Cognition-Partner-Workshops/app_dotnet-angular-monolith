@@ -95,14 +95,38 @@ app.UseRateLimiting(maxRequests: 100, windowSeconds: 60);
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseCors();
-app.UseStaticFiles();
+// Angular 17 builds to wwwroot/browser/
+var browserPath = Path.Combine(app.Environment.WebRootPath ?? "wwwroot", "browser");
+if (Directory.Exists(browserPath))
+{
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(browserPath)
+    });
+}
+else
+{
+    app.UseStaticFiles();
+}
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<CallHub>("/hubs/call");
-app.MapFallbackToFile("index.html");
+app.MapFallback(async context =>
+{
+    var bPath = Path.Combine(app.Environment.WebRootPath ?? "wwwroot", "browser", "index.html");
+    if (File.Exists(bPath))
+    {
+        context.Response.ContentType = "text/html";
+        await context.Response.SendFileAsync(bPath);
+    }
+    else
+    {
+        context.Response.StatusCode = 404;
+    }
+});
 app.Run();
 
 // Make Program class accessible for integration tests
