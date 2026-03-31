@@ -50,10 +50,10 @@ import { ContactDto, CallLogDto } from '../../models/interfaces';
           </div>
           <div class="contact-actions">
             <button class="call-btn audio" (click)="makeCall(contact, 'Audio')" title="Audio Call">
-              &#128222;
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1 1 0 011.01-.24c1.12.37 2.33.57 3.58.57a1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.46.57 3.58a1 1 0 01-.24 1.01l-2.21 2.2z"/></svg>
             </button>
             <button class="call-btn video" (click)="makeCall(contact, 'Video')" title="Video Call">
-              &#128249;
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z"/></svg>
             </button>
           </div>
         </div>
@@ -151,11 +151,14 @@ import { ContactDto, CallLogDto } from '../../models/interfaces';
     .contact-info .status.online { color: #00e676; }
     .contact-actions { display: flex; gap: 12px; }
     .call-btn {
-      width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer;
+      width: 44px; height: 44px; border-radius: 50%; border: 2px solid transparent; cursor: pointer;
       display: flex; align-items: center; justify-content: center; font-size: 1.2em;
+      transition: all 0.2s;
     }
-    .call-btn.audio { background: rgba(0,210,255,0.15); }
-    .call-btn.video { background: rgba(0,230,118,0.15); }
+    .call-btn:hover { transform: scale(1.1); }
+    .call-btn:active { transform: scale(0.95); }
+    .call-btn.audio { background: rgba(0,210,255,0.2); color: #00d2ff; border-color: rgba(0,210,255,0.4); }
+    .call-btn.video { background: rgba(0,230,118,0.2); color: #00e676; border-color: rgba(0,230,118,0.4); }
     .history-card {
       display: flex; align-items: center; padding: 14px 0;
       border-bottom: 1px solid rgba(255,255,255,0.05);
