@@ -18,6 +18,7 @@ export class WebRTCService {
   private peerConnection: RTCPeerConnection | null = null;
   private localStream: MediaStream | null = null;
   private remoteStream: MediaStream | null = null;
+  private remoteAudio: HTMLAudioElement | null = null;
 
   private callStateSubject = new BehaviorSubject<WebRTCCallState>('idle');
   callState$ = this.callStateSubject.asObservable();
@@ -44,22 +45,7 @@ export class WebRTCService {
       { urls: 'stun:stun1.l.google.com:19302' },
       { urls: 'stun:stun2.l.google.com:19302' },
       { urls: 'stun:stun3.l.google.com:19302' },
-      { urls: 'stun:stun4.l.google.com:19302' },
-      {
-        urls: 'turn:openrelay.metered.ca:80',
-        username: 'openrelayproject',
-        credential: 'openrelayproject'
-      },
-      {
-        urls: 'turn:openrelay.metered.ca:443',
-        username: 'openrelayproject',
-        credential: 'openrelayproject'
-      },
-      {
-        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-        username: 'openrelayproject',
-        credential: 'openrelayproject'
-      }
+      { urls: 'stun:stun4.l.google.com:19302' }
     ],
     iceCandidatePoolSize: 10
   };
@@ -332,8 +318,15 @@ export class WebRTCService {
       this.ngZone.run(() => {
         if (event.streams && event.streams[0]) {
           this.remoteStream = event.streams[0];
-          this.remoteStreamSubject.next(this.remoteStream);
+        } else {
+          // Some browsers don't populate event.streams
+          if (!this.remoteStream) {
+            this.remoteStream = new MediaStream();
+          }
+          this.remoteStream.addTrack(event.track);
         }
+        this.remoteStreamSubject.next(this.remoteStream);
+        this.playRemoteAudio(this.remoteStream);
       });
     };
 
@@ -356,12 +349,34 @@ export class WebRTCService {
     };
   }
 
+  private playRemoteAudio(stream: MediaStream): void {
+    if (!this.remoteAudio) {
+      this.remoteAudio = document.createElement('audio');
+      this.remoteAudio.autoplay = true;
+      this.remoteAudio.setAttribute('playsinline', '');
+      this.remoteAudio.style.display = 'none';
+      document.body.appendChild(this.remoteAudio);
+    }
+    this.remoteAudio.srcObject = stream;
+    this.remoteAudio.play().catch(err => {
+      console.warn('Remote audio autoplay blocked:', err);
+    });
+  }
+
   private cleanupCall(): void {
     // Stop local media tracks
     if (this.localStream) {
       this.localStream.getTracks().forEach(track => track.stop());
       this.localStream = null;
       this.localStreamSubject.next(null);
+    }
+
+    // Clean up remote audio element
+    if (this.remoteAudio) {
+      this.remoteAudio.pause();
+      this.remoteAudio.srcObject = null;
+      this.remoteAudio.remove();
+      this.remoteAudio = null;
     }
 
     // Close peer connection

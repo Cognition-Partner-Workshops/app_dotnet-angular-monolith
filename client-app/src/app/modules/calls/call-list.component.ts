@@ -374,6 +374,7 @@ export class CallListComponent implements OnInit, OnDestroy, AfterViewChecked {
       const sub = this.webrtcService.remoteStream$.subscribe(stream => {
         if (stream && this.remoteVideoRef?.nativeElement) {
           this.remoteVideoRef.nativeElement.srcObject = stream;
+          this.remoteVideoRef.nativeElement.play().catch(() => {});
         }
       });
       sub.unsubscribe();
@@ -382,6 +383,7 @@ export class CallListComponent implements OnInit, OnDestroy, AfterViewChecked {
       const sub = this.webrtcService.localStream$.subscribe(stream => {
         if (stream && this.localVideoRef?.nativeElement) {
           this.localVideoRef.nativeElement.srcObject = stream;
+          this.localVideoRef.nativeElement.play().catch(() => {});
         }
       });
       sub.unsubscribe();
