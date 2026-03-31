@@ -56,6 +56,12 @@ public class OrderService {
                 customer.getState(), customer.getZipCode()));
 
         for (OrderItemData itemData : items) {
+            if (itemData.productId() == null) {
+                throw new IllegalArgumentException("Product ID must not be null");
+            }
+            if (itemData.quantity() == null || itemData.quantity() <= 0) {
+                throw new IllegalArgumentException("Quantity must be a positive number");
+            }
             Product product = productRepository.findById(itemData.productId())
                     .orElseThrow(() -> new IllegalArgumentException(
                             "Product " + itemData.productId() + " not found"));

@@ -29,6 +29,9 @@ public class InventoryService {
 
     @Transactional
     public InventoryItem restock(Integer productId, Integer quantity) {
+        if (quantity == null || quantity <= 0) {
+            throw new IllegalArgumentException("Quantity must be a positive number");
+        }
         InventoryItem item = inventoryItemRepository.findByProductId(productId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "No inventory record for product " + productId));

@@ -1,7 +1,6 @@
 package com.ordermanager.api.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -48,7 +47,7 @@ public class CustomerOrder {
     private String shippingAddress;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
-    @JsonManagedReference("order-items")
+    @JsonIgnoreProperties({"order"})
     private List<OrderItem> items = new ArrayList<>();
 
     public CustomerOrder() {
