@@ -44,7 +44,9 @@ public class OrdersController {
     @PostMapping
     public ResponseEntity<CustomerOrder> create(
             @RequestBody CreateOrderRequest request) {
-        List<OrderItemData> items = request.getItems().stream()
+        List<OrderItemData> items = request.getItems() == null
+                ? List.of()
+                : request.getItems().stream()
                 .map(i -> new OrderItemData(i.getProductId(), i.getQuantity()))
                 .toList();
         CustomerOrder order = orderService.createOrder(
