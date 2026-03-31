@@ -1,6 +1,6 @@
 package com.ordermanager.api.model;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -30,9 +30,9 @@ public class CustomerOrder {
     @Column(name = "customer_id", insertable = false, updatable = false)
     private Integer customerId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "customer_id", nullable = false)
-    @JsonBackReference("customer-orders")
+    @JsonIgnoreProperties({"orders"})
     private Customer customer;
 
     @Column(name = "order_date", nullable = false)

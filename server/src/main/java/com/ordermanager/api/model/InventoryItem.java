@@ -1,6 +1,6 @@
 package com.ordermanager.api.model;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -26,7 +26,7 @@ public class InventoryItem {
 
     @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "product_id", nullable = false, unique = true)
-    @JsonBackReference("product-inventory")
+    @JsonIgnoreProperties({"inventory", "orderItems"})
     private Product product;
 
     @Column(name = "quantity_on_hand", nullable = false)

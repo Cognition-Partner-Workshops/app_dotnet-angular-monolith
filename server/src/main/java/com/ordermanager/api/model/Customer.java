@@ -1,6 +1,6 @@
 package com.ordermanager.api.model;
 
-import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -47,7 +47,7 @@ public class Customer {
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonManagedReference("customer-orders")
+    @JsonIgnoreProperties({"customer"})
     private List<CustomerOrder> orders = new ArrayList<>();
 
     public Customer() {

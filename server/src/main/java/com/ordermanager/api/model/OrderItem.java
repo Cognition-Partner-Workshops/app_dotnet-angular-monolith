@@ -1,6 +1,6 @@
 package com.ordermanager.api.model;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -27,7 +27,7 @@ public class OrderItem {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
-    @JsonBackReference("order-items")
+    @JsonIgnoreProperties({"items", "customer"})
     private CustomerOrder order;
 
     @Column(name = "product_id", insertable = false, updatable = false)
@@ -35,6 +35,7 @@ public class OrderItem {
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "product_id", nullable = false)
+    @JsonIgnoreProperties({"inventory", "orderItems"})
     private Product product;
 
     @Column(nullable = false)
