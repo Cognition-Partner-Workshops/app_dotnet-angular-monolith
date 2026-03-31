@@ -47,7 +47,7 @@ public class CustomerOrder {
     @Column(name = "shipping_address", length = 500)
     private String shippingAddress;
 
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @JsonManagedReference("order-items")
     private List<OrderItem> items = new ArrayList<>();
 
