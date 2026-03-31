@@ -50,11 +50,21 @@ builder.Services.AddAuthentication(options =>
         ClockSkew = TimeSpan.Zero
     };
 
-    // Allow SignalR to receive JWT from query string
+    // Allow JWT from X-Authorization header (tunnel proxy overrides Authorization)
+    // and from query string for SignalR
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = context =>
         {
+            // Check X-Authorization header first (used when behind proxy with Basic Auth)
+            var xAuth = context.Request.Headers["X-Authorization"].FirstOrDefault();
+            if (!string.IsNullOrEmpty(xAuth) && xAuth.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            {
+                context.Token = xAuth.Substring("Bearer ".Length).Trim();
+                return Task.CompletedTask;
+            }
+
+            // Allow SignalR to receive JWT from query string
             var accessToken = context.Request.Query["access_token"];
             var path = context.HttpContext.Request.Path;
             if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
