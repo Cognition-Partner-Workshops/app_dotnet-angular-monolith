@@ -319,17 +319,20 @@ export class WebRTCService {
       this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
       this.localStreamSubject.next(this.localStream);
     } catch (err) {
-      console.error('Failed to acquire media:', err);
+      console.warn('Failed to acquire media:', err);
       if (callType === 'Video') {
         try {
           this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
           this.localStreamSubject.next(this.localStream);
+          return;
         } catch (audioErr) {
-          throw audioErr;
+          console.warn('Audio-only fallback also failed:', audioErr);
         }
-      } else {
-        throw err;
       }
+      // Proceed without local media - can still receive remote audio via relay
+      console.warn('Proceeding without local media devices');
+      this.localStream = null;
+      this.localStreamSubject.next(null);
     }
   }
 
@@ -358,7 +361,7 @@ export class WebRTCService {
 
   private startAudioRelay(): void {
     if (this.relayWs) return;
-    if (!this.currentCallId || !this.localStream) return;
+    if (!this.currentCallId) return;
 
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${proto}//${location.host}/ws/relay?callId=${encodeURIComponent(this.currentCallId)}`;
