@@ -1,5 +1,6 @@
 import { Injectable, NgZone } from '@angular/core';
 import { AuthService } from './auth.service';
+import { ServerConfigService } from './server-config.service';
 import { BehaviorSubject, Subject } from 'rxjs';
 import * as signalR from '@microsoft/signalr';
 
@@ -65,18 +66,25 @@ export class WebRTCService {
   private remoteVideoUrlSubject = new BehaviorSubject<string | null>(null);
   remoteVideoUrl$ = this.remoteVideoUrlSubject.asObservable();
 
-  // STUN-only config for WebRTC video (best-effort)
-  private readonly rtcConfig: RTCConfiguration = {
-    iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun2.l.google.com:19302' }
-    ],
-    iceCandidatePoolSize: 10
-  };
+  // RTC config - computed dynamically based on network mode
+  private getRtcConfig(): RTCConfiguration {
+    if (this.serverConfig.isLocalMode) {
+      // Local network: no STUN/TURN needed, direct P2P on same subnet
+      return { iceServers: [], iceCandidatePoolSize: 0 };
+    }
+    return {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' }
+      ],
+      iceCandidatePoolSize: 10
+    };
+  }
 
   constructor(
     private authService: AuthService,
+    private serverConfig: ServerConfigService,
     private ngZone: NgZone
   ) {}
 
@@ -103,8 +111,9 @@ export class WebRTCService {
       this.hubConnection = null;
     }
 
+    const hubUrl = this.serverConfig.resolveUrl('/hubs/call');
     this.hubConnection = new signalR.HubConnectionBuilder()
-      .withUrl('/hubs/call', {
+      .withUrl(hubUrl, {
         accessTokenFactory: () => this.authService.getAccessToken() || ''
       })
       .withAutomaticReconnect([0, 1000, 3000, 5000, 10000, 15000, 30000])
@@ -453,8 +462,7 @@ export class WebRTCService {
     if (this.relayWs) return;
     if (!this.currentCallId) return;
 
-    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${proto}//${location.host}/ws/relay?callId=${encodeURIComponent(this.currentCallId)}`;
+    const wsUrl = this.serverConfig.resolveWsUrl(`/ws/relay?callId=${encodeURIComponent(this.currentCallId)}`);
     console.log('Connecting to audio relay:', wsUrl);
 
     this.relayWs = new WebSocket(wsUrl);
@@ -570,8 +578,7 @@ export class WebRTCService {
 
   private startVideoRelay(): void {
     if (!this.currentCallId) return;
-    const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${wsProtocol}//${location.host}/ws/relay?callId=${this.currentCallId}-video`;
+    const wsUrl = this.serverConfig.resolveWsUrl(`/ws/relay?callId=${this.currentCallId}-video`);
 
     this.videoRelayWs = new WebSocket(wsUrl);
     this.videoRelayWs.binaryType = 'arraybuffer';
@@ -695,8 +702,9 @@ export class WebRTCService {
   // ---- WebRTC PeerConnection (for video best-effort via STUN) ----
 
   private createPeerConnection(): void {
-    console.log('Creating PeerConnection with STUN (video best-effort)');
-    this.peerConnection = new RTCPeerConnection(this.rtcConfig);
+    const rtcCfg = this.getRtcConfig();
+    console.log('Creating PeerConnection', this.serverConfig.isLocalMode ? '(local network, no STUN)' : '(STUN for NAT traversal)');
+    this.peerConnection = new RTCPeerConnection(rtcCfg);
 
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate && this.currentTargetUserId && this.hubConnection) {

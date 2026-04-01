@@ -17,7 +17,8 @@
             "tsConfig": "tsconfig.app.json",
             "polyfills": ["zone.js"],
             "assets": [
-              "src/manifest.webmanifest"
+              "src/manifest.webmanifest",
+              "src/sw.js"
             ]
           }
         }

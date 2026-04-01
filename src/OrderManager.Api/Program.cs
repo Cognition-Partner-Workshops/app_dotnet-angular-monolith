@@ -96,9 +96,10 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy => policy
-        .AllowAnyOrigin()
+        .SetIsOriginAllowed(_ => true)
         .AllowAnyMethod()
-        .AllowAnyHeader()));
+        .AllowAnyHeader()
+        .AllowCredentials()));
 
 var app = builder.Build();
 
@@ -132,6 +133,9 @@ else
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Health check endpoint for local network connectivity testing
+app.MapGet("/healthz", () => Results.Ok(new { status = "ok", timestamp = DateTime.UtcNow }));
+
 app.MapControllers();
 app.MapHub<CallHub>("/hubs/call");
 app.MapFallback(async context =>
@@ -147,6 +151,12 @@ app.MapFallback(async context =>
         context.Response.StatusCode = 404;
     }
 });
+// Listen on all interfaces so local network devices can connect
+var urls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
+if (string.IsNullOrEmpty(urls))
+{
+    app.Urls.Add("http://0.0.0.0:5000");
+}
 app.Run();
 
 // Make Program class accessible for integration tests
