@@ -304,7 +304,7 @@ export class CallListComponent implements OnInit, OnDestroy, AfterViewChecked {
       this.offlineService.isOnline$.subscribe(online => this.isOnline = online)
     );
     this.loadContacts();
-    this.webrtcService.connect();
+    // SignalR is connected globally in AppComponent, no need to connect here
 
     this.subscriptions.push(
       this.webrtcService.callState$.subscribe(state => {
@@ -366,7 +366,7 @@ export class CallListComponent implements OnInit, OnDestroy, AfterViewChecked {
   ngOnDestroy(): void {
     this.subscriptions.forEach(s => s.unsubscribe());
     this.stopCallTimer();
-    this.webrtcService.disconnect();
+    // Don't disconnect WebRTC here - it's managed globally in AppComponent
   }
 
   private attachStreams(): void {

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from './services/auth.service';
 import { OfflineService } from './services/offline.service';
+import { WebRTCService } from './services/webrtc.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -66,13 +67,21 @@ export class AppComponent implements OnInit, OnDestroy {
 
   constructor(
     private authService: AuthService,
-    private offlineService: OfflineService
+    private offlineService: OfflineService,
+    private webrtcService: WebRTCService
   ) {}
 
   ngOnInit(): void {
     this.subs.push(
       this.offlineService.isOnline$.subscribe(online => this.isOnline = online),
-      this.authService.currentUser$.subscribe(user => this.isAuthenticated = !!user)
+      this.authService.currentUser$.subscribe(user => {
+        this.isAuthenticated = !!user;
+        if (user) {
+          this.webrtcService.connect();
+        } else {
+          this.webrtcService.disconnect();
+        }
+      })
     );
   }
 

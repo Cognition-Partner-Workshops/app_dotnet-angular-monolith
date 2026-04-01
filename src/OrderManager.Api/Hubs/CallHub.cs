@@ -37,13 +37,22 @@ public class CallHub : Hub
         var callerId = GetUserId();
         if (!callerId.HasValue) return;
 
-        if (UserConnections.TryGetValue(targetUserId, out var connectionId))
+        // Try to find the target user's connection, with retries for timing issues
+        string? connectionId = null;
+        for (int i = 0; i < 6; i++)
+        {
+            if (UserConnections.TryGetValue(targetUserId, out connectionId))
+                break;
+            await Task.Delay(500); // Wait 500ms between retries (total 3s max)
+        }
+
+        if (connectionId != null)
         {
             await Clients.Client(connectionId).SendAsync("ReceiveOffer", callerId.Value, offer);
         }
         else
         {
-            await Clients.Caller.SendAsync("CallFailed", targetUserId, "User is offline. Call has been queued.");
+            await Clients.Caller.SendAsync("CallFailed", targetUserId, "User is not online right now. Please make sure they have the app open on the Calls page.");
         }
     }
 
