@@ -67,7 +67,10 @@ export class WebRTCService {
     if (this.hubConnection?.state === signalR.HubConnectionState.Connected) return;
 
     const token = this.authService.getAccessToken();
-    if (!token) return;
+    if (!token) {
+      console.log('No valid token, skipping SignalR connect');
+      return;
+    }
 
     this.hubConnection = new signalR.HubConnectionBuilder()
       .withUrl('/hubs/call', {
@@ -82,8 +85,15 @@ export class WebRTCService {
     try {
       await this.hubConnection.start();
       console.log('SignalR connected for WebRTC signaling');
-    } catch (err) {
-      console.error('SignalR connection failed:', err);
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.error('SignalR connection failed:', errMsg);
+      // If 401/Unauthorized, the stored token is stale - clear it
+      if (errMsg.includes('401') || errMsg.includes('Unauthorized')) {
+        console.warn('Clearing stale auth - please log in again');
+        this.authService.logout();
+      }
+      this.hubConnection = null;
     }
   }
 
