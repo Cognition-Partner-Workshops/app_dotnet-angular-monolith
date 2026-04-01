@@ -108,6 +108,8 @@ import { Subscription } from 'rxjs';
         <div class="call-screen">
           <video #remoteVideo *ngIf="currentCallType === 'Video'" class="remote-video"
                  autoplay playsinline></video>
+          <video #relayVideo *ngIf="currentCallType === 'Video' && remoteVideoUrl" class="remote-video relay-video"
+                 autoplay playsinline></video>
           <video #localVideo *ngIf="currentCallType === 'Video' && localStreamActive" class="local-video"
                  autoplay playsinline muted></video>
 
@@ -223,6 +225,9 @@ import { Subscription } from 'rxjs';
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
       object-fit: cover; background: #000;
     }
+    .relay-video {
+      z-index: 1;
+    }
     .local-video {
       position: absolute; top: 20px; right: 20px; width: 120px; height: 160px;
       object-fit: cover; border-radius: 12px; border: 2px solid rgba(255,255,255,0.3);
@@ -269,6 +274,7 @@ import { Subscription } from 'rxjs';
 export class CallListComponent implements OnInit, OnDestroy, AfterViewChecked {
   @ViewChild('remoteVideo') remoteVideoRef!: ElementRef<HTMLVideoElement>;
   @ViewChild('localVideo') localVideoRef!: ElementRef<HTMLVideoElement>;
+  @ViewChild('relayVideo') relayVideoRef!: ElementRef<HTMLVideoElement>;
 
   contacts: ContactDto[] = [];
   callHistory: CallLogDto[] = [];
@@ -281,6 +287,7 @@ export class CallListComponent implements OnInit, OnDestroy, AfterViewChecked {
   isVideoOff = false;
   currentCallType = 'Audio';
   localStreamActive = false;
+  remoteVideoUrl: string | null = null;
 
   webrtcCallState: WebRTCCallState = 'idle';
   incomingCall: IncomingCall | null = null;
@@ -344,14 +351,38 @@ export class CallListComponent implements OnInit, OnDestroy, AfterViewChecked {
 
     this.subscriptions.push(
       this.webrtcService.remoteStream$.subscribe(stream => {
-        if (stream) { this.needsVideoAttach = true; }
+        if (stream) {
+          this.needsVideoAttach = true;
+          // Also directly attach if video element exists
+          if (this.remoteVideoRef?.nativeElement) {
+            this.remoteVideoRef.nativeElement.srcObject = stream;
+            this.remoteVideoRef.nativeElement.play().catch(() => {});
+          }
+        }
       })
     );
 
     this.subscriptions.push(
       this.webrtcService.localStream$.subscribe(stream => {
         this.localStreamActive = !!stream;
-        if (stream) { this.needsVideoAttach = true; }
+        if (stream) {
+          this.needsVideoAttach = true;
+          // Also directly attach if video element exists
+          if (this.localVideoRef?.nativeElement) {
+            this.localVideoRef.nativeElement.srcObject = stream;
+            this.localVideoRef.nativeElement.play().catch(() => {});
+          }
+        }
+      })
+    );
+
+    // Subscribe to video relay URL (server-relayed video)
+    this.subscriptions.push(
+      this.webrtcService.remoteVideoUrl$.subscribe(url => {
+        this.remoteVideoUrl = url;
+        if (url) {
+          this.needsVideoAttach = true;
+        }
       })
     );
   }
@@ -370,23 +401,22 @@ export class CallListComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   private attachStreams(): void {
-    if (this.remoteVideoRef?.nativeElement) {
-      const sub = this.webrtcService.remoteStream$.subscribe(stream => {
-        if (stream && this.remoteVideoRef?.nativeElement) {
-          this.remoteVideoRef.nativeElement.srcObject = stream;
-          this.remoteVideoRef.nativeElement.play().catch(() => {});
-        }
-      });
-      sub.unsubscribe();
+    // Get current values from BehaviorSubjects
+    const remoteStream = this.webrtcService.getRemoteStream();
+    const localStream = this.webrtcService.getLocalStream();
+
+    if (this.remoteVideoRef?.nativeElement && remoteStream) {
+      this.remoteVideoRef.nativeElement.srcObject = remoteStream;
+      this.remoteVideoRef.nativeElement.play().catch(() => {});
     }
-    if (this.localVideoRef?.nativeElement) {
-      const sub = this.webrtcService.localStream$.subscribe(stream => {
-        if (stream && this.localVideoRef?.nativeElement) {
-          this.localVideoRef.nativeElement.srcObject = stream;
-          this.localVideoRef.nativeElement.play().catch(() => {});
-        }
-      });
-      sub.unsubscribe();
+    if (this.localVideoRef?.nativeElement && localStream) {
+      this.localVideoRef.nativeElement.srcObject = localStream;
+      this.localVideoRef.nativeElement.play().catch(() => {});
+    }
+    // Attach relay video URL (MediaSource)
+    if (this.relayVideoRef?.nativeElement && this.remoteVideoUrl) {
+      this.relayVideoRef.nativeElement.src = this.remoteVideoUrl;
+      this.relayVideoRef.nativeElement.play().catch(() => {});
     }
   }
 
@@ -428,7 +458,7 @@ export class CallListComponent implements OnInit, OnDestroy, AfterViewChecked {
     this.isMuted = false;
     this.isVideoOff = false;
     this.callService.initiateCall(contact.contactUserId, callType).subscribe({ error: () => {} });
-    await this.webrtcService.startCall(contact.contactUserId, callType);
+    await this.webrtcService.startCall(contact.contactUserId, callType, contact.displayName || contact.username);
   }
 
   async acceptIncomingCall(): Promise<void> {

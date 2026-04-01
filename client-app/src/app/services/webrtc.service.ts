@@ -36,6 +36,12 @@ export class WebRTCService {
 
   private currentTargetUserId: number | null = null;
   private currentCallType: string = 'Audio';
+
+  // Active call metadata (exposed for global UI)
+  private activeCallNameSubject = new BehaviorSubject<string>('');
+  activeCallName$ = this.activeCallNameSubject.asObservable();
+  private activeCallTypeSubject = new BehaviorSubject<string>('Audio');
+  activeCallType$ = this.activeCallTypeSubject.asObservable();
   private pendingIceCandidates: RTCIceCandidateInit[] = [];
 
   // Audio relay properties
@@ -47,6 +53,17 @@ export class WebRTCService {
   private nextPlayTime: number = 0;
   private readonly RELAY_SAMPLE_RATE = 16000;
   private readonly RELAY_BUFFER_SIZE = 2048;
+
+  // Video relay properties (server-relayed video via MediaRecorder/MediaSource)
+  private videoRelayWs: WebSocket | null = null;
+  private mediaRecorder: MediaRecorder | null = null;
+  private remoteMediaSource: MediaSource | null = null;
+  private remoteSourceBuffer: SourceBuffer | null = null;
+  private videoBufferQueue: ArrayBuffer[] = [];
+  private isAppendingVideo = false;
+
+  private remoteVideoUrlSubject = new BehaviorSubject<string | null>(null);
+  remoteVideoUrl$ = this.remoteVideoUrlSubject.asObservable();
 
   // STUN-only config for WebRTC video (best-effort)
   private readonly rtcConfig: RTCConfiguration = {
@@ -62,6 +79,14 @@ export class WebRTCService {
     private authService: AuthService,
     private ngZone: NgZone
   ) {}
+
+  getRemoteStream(): MediaStream | null {
+    return this.remoteStream;
+  }
+
+  getLocalStream(): MediaStream | null {
+    return this.localStream;
+  }
 
   async connect(): Promise<void> {
     if (this.hubConnection?.state === signalR.HubConnectionState.Connected) return;
@@ -224,9 +249,11 @@ export class WebRTCService {
     });
   }
 
-  async startCall(targetUserId: number, callType: string): Promise<void> {
+  async startCall(targetUserId: number, callType: string, contactName?: string): Promise<void> {
     this.currentTargetUserId = targetUserId;
     this.currentCallType = callType;
+    this.activeCallTypeSubject.next(callType);
+    if (contactName) this.activeCallNameSubject.next(contactName);
     this.callStateSubject.next('calling');
     this.pendingIceCandidates = [];
 
@@ -264,6 +291,11 @@ export class WebRTCService {
 
       // Start audio relay immediately (caller side)
       this.startAudioRelay();
+
+      // Start video relay for video calls
+      if (callType === 'Video') {
+        this.startVideoRelay();
+      }
     } catch (err) {
       console.error('Error starting call:', err);
       this.callStateSubject.next('failed');
@@ -271,13 +303,15 @@ export class WebRTCService {
     }
   }
 
-  async acceptCall(callerId: number, offerJson: string): Promise<void> {
+  async acceptCall(callerId: number, offerJson: string, callerName?: string): Promise<void> {
     this.currentTargetUserId = callerId;
     this.pendingIceCandidates = [];
+    if (callerName) this.activeCallNameSubject.next(callerName);
 
     try {
       const offer = JSON.parse(offerJson);
       this.currentCallType = offer.callType || 'Audio';
+      this.activeCallTypeSubject.next(this.currentCallType);
       this.currentCallId = offer.callId || this.generateCallId();
 
       // Prime audio context during user gesture to avoid autoplay blocking
@@ -316,6 +350,11 @@ export class WebRTCService {
 
       // Start audio relay (callee side)
       this.startAudioRelay();
+
+      // Start video relay for video calls
+      if (this.currentCallType === 'Video') {
+        this.startVideoRelay();
+      }
     } catch (err) {
       console.error('Error accepting call:', err);
       this.callStateSubject.next('failed');
@@ -527,6 +566,132 @@ export class WebRTCService {
     this.nextPlayTime = 0;
   }
 
+  // ---- Video Relay (server-relayed compressed video via WebSocket) ----
+
+  private startVideoRelay(): void {
+    if (!this.currentCallId) return;
+    const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${location.host}/ws/relay?callId=${this.currentCallId}-video`;
+
+    this.videoRelayWs = new WebSocket(wsUrl);
+    this.videoRelayWs.binaryType = 'arraybuffer';
+
+    this.videoRelayWs.onopen = () => {
+      console.log('Video relay connected for call', this.currentCallId);
+      this.startVideoCapture();
+      this.setupRemoteVideoPlayback();
+    };
+
+    this.videoRelayWs.onmessage = (event) => {
+      if (event.data instanceof ArrayBuffer && event.data.byteLength > 0) {
+        this.appendVideoBuffer(event.data);
+      }
+    };
+
+    this.videoRelayWs.onerror = (err) => console.error('Video relay error:', err);
+    this.videoRelayWs.onclose = () => console.log('Video relay disconnected');
+  }
+
+  private startVideoCapture(): void {
+    if (!this.localStream) return;
+    const videoTrack = this.localStream.getVideoTracks()[0];
+    if (!videoTrack) return;
+
+    const videoStream = new MediaStream([videoTrack]);
+
+    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp8')
+      ? 'video/webm;codecs=vp8'
+      : 'video/webm';
+
+    try {
+      this.mediaRecorder = new MediaRecorder(videoStream, {
+        mimeType,
+        videoBitsPerSecond: 200000 // 200kbps low bandwidth
+      });
+    } catch {
+      console.warn('MediaRecorder not supported, video relay unavailable');
+      return;
+    }
+
+    this.mediaRecorder.ondataavailable = (e: BlobEvent) => {
+      if (e.data.size > 0 && this.videoRelayWs?.readyState === WebSocket.OPEN) {
+        e.data.arrayBuffer().then(buf => {
+          this.videoRelayWs?.send(buf);
+        });
+      }
+    };
+
+    this.mediaRecorder.start(300); // produce chunks every 300ms
+    console.log('Video capture started via MediaRecorder');
+  }
+
+  private setupRemoteVideoPlayback(): void {
+    this.remoteMediaSource = new MediaSource();
+    const url = URL.createObjectURL(this.remoteMediaSource);
+
+    this.remoteMediaSource.addEventListener('sourceopen', () => {
+      const mimeType = 'video/webm;codecs=vp8';
+      try {
+        this.remoteSourceBuffer = this.remoteMediaSource!.addSourceBuffer(mimeType);
+        this.remoteSourceBuffer.mode = 'sequence';
+        this.remoteSourceBuffer.addEventListener('updateend', () => {
+          this.isAppendingVideo = false;
+          this.flushVideoBufferQueue();
+        });
+        console.log('Remote video MediaSource ready');
+      } catch (e) {
+        console.error('Failed to create SourceBuffer:', e);
+      }
+    });
+
+    this.ngZone.run(() => {
+      this.remoteVideoUrlSubject.next(url);
+    });
+  }
+
+  private appendVideoBuffer(data: ArrayBuffer): void {
+    this.videoBufferQueue.push(data);
+    this.flushVideoBufferQueue();
+  }
+
+  private flushVideoBufferQueue(): void {
+    if (this.isAppendingVideo || !this.remoteSourceBuffer || this.videoBufferQueue.length === 0) return;
+    if (this.remoteMediaSource?.readyState !== 'open') return;
+
+    this.isAppendingVideo = true;
+    const buffer = this.videoBufferQueue.shift()!;
+    try {
+      this.remoteSourceBuffer.appendBuffer(buffer);
+    } catch (e) {
+      console.error('appendBuffer failed:', e);
+      this.isAppendingVideo = false;
+    }
+  }
+
+  private stopVideoRelay(): void {
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      try { this.mediaRecorder.stop(); } catch { /* ignore */ }
+    }
+    this.mediaRecorder = null;
+
+    if (this.videoRelayWs) {
+      this.videoRelayWs.close();
+      this.videoRelayWs = null;
+    }
+
+    if (this.remoteMediaSource && this.remoteMediaSource.readyState === 'open') {
+      try { this.remoteMediaSource.endOfStream(); } catch { /* ignore */ }
+    }
+    this.remoteMediaSource = null;
+    this.remoteSourceBuffer = null;
+    this.videoBufferQueue = [];
+    this.isAppendingVideo = false;
+
+    const url = this.remoteVideoUrlSubject.value;
+    if (url) URL.revokeObjectURL(url);
+    this.remoteVideoUrlSubject.next(null);
+  }
+
   // ---- WebRTC PeerConnection (for video best-effort via STUN) ----
 
   private createPeerConnection(): void {
@@ -569,6 +734,7 @@ export class WebRTCService {
 
   private cleanupCall(): void {
     this.stopAudioRelay();
+    this.stopVideoRelay();
 
     if (this.localStream) {
       this.localStream.getTracks().forEach(track => track.stop());
