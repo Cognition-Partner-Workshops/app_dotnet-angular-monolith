@@ -66,12 +66,11 @@ export class WebRTCService {
   private remoteVideoUrlSubject = new BehaviorSubject<string | null>(null);
   remoteVideoUrl$ = this.remoteVideoUrlSubject.asObservable();
 
-  // RTC config - computed dynamically based on network mode
+  // Track whether WebRTC P2P connected (so we can stop relay)
+  private peerConnectionConnected = false;
+
+  // RTC config - always includes STUN for NAT traversal
   private getRtcConfig(): RTCConfiguration {
-    if (this.serverConfig.isLocalMode) {
-      // Local network: no STUN/TURN needed, direct P2P on same subnet
-      return { iceServers: [], iceCandidatePoolSize: 0 };
-    }
     return {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -732,7 +731,19 @@ export class WebRTCService {
     };
 
     this.peerConnection.onconnectionstatechange = () => {
-      console.log('PeerConnection state:', this.peerConnection?.connectionState);
+      const state = this.peerConnection?.connectionState;
+      console.log('PeerConnection state:', state);
+      if (state === 'connected') {
+        // WebRTC P2P connected! Audio/video flows directly between phones.
+        // Stop relay since P2P is working (on same WiFi, this is direct).
+        this.peerConnectionConnected = true;
+        console.log('WebRTC P2P connected - audio/video flows directly between devices');
+        this.stopAudioRelay();
+        this.stopVideoRelay();
+
+        // Play remote audio from the WebRTC peer connection
+        this.playRemoteStreamAudio();
+      }
     };
 
     this.peerConnection.oniceconnectionstatechange = () => {
@@ -740,9 +751,28 @@ export class WebRTCService {
     };
   }
 
+  private playRemoteStreamAudio(): void {
+    if (!this.remoteStream) return;
+    // Create an audio element to play remote audio from WebRTC P2P
+    const audioEl = document.createElement('audio');
+    audioEl.srcObject = this.remoteStream;
+    audioEl.autoplay = true;
+    audioEl.setAttribute('playsinline', '');
+    audioEl.play().catch(err => console.warn('Remote audio autoplay blocked:', err));
+    // Store reference for cleanup
+    (this as any)._remoteAudioEl = audioEl;
+  }
+
   private cleanupCall(): void {
     this.stopAudioRelay();
     this.stopVideoRelay();
+    this.peerConnectionConnected = false;
+    // Clean up remote audio element
+    const audioEl = (this as any)._remoteAudioEl as HTMLAudioElement | undefined;
+    if (audioEl) {
+      audioEl.srcObject = null;
+      (this as any)._remoteAudioEl = null;
+    }
 
     if (this.localStream) {
       this.localStream.getTracks().forEach(track => track.stop());

@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { OfflineService } from '../../services/offline.service';
-import { ServerConfigService } from '../../services/server-config.service';
 import { UserDto, OfflineReel } from '../../models/interfaces';
 
 @Component({
@@ -44,34 +43,32 @@ import { UserDto, OfflineReel } from '../../models/interfaces';
       </div>
 
       <div class="profile-section">
-        <h3>Network Mode</h3>
-        <div class="network-mode">
-          <p class="mode-description">
-            For offline calling on train WiFi (no internet), one person runs the server
-            and others connect via local IP.
-          </p>
-          <div class="mode-toggle">
-            <button class="mode-btn" [class.active]="!isLocalMode" (click)="setOnlineMode()">Online (Internet)</button>
-            <button class="mode-btn" [class.active]="isLocalMode" (click)="setLocalMode()">Local WiFi</button>
+        <h3>Calling</h3>
+        <div class="calling-info">
+          <div class="calling-feature">
+            <span class="feature-icon">&#128222;</span>
+            <div class="feature-text">
+              <strong>Works on WiFi</strong>
+              <p>When you and your friend are on the same WiFi (like train WiFi),
+                calls connect directly between your phones - no internet needed!</p>
+            </div>
           </div>
-          <div *ngIf="isLocalMode" class="local-config">
-            <label>Server IP Address</label>
-            <div class="input-row">
-              <input type="text" [(ngModel)]="localServerUrl" placeholder="http://192.168.1.5:5000" class="server-input" />
-              <button class="btn-test" (click)="testConnection()" [disabled]="isTesting">{{ isTesting ? 'Testing...' : 'Test' }}</button>
+          <div class="calling-feature">
+            <span class="feature-icon">&#128274;</span>
+            <div class="feature-text">
+              <strong>Peer-to-Peer</strong>
+              <p>Audio and video flow directly between devices for the best quality
+                and privacy. No data goes through external servers.</p>
             </div>
-            <p *ngIf="connectionStatus === 'success'" class="status-msg success">Connected successfully!</p>
-            <p *ngIf="connectionStatus === 'failed'" class="status-msg error">Connection failed. Check IP and ensure server is running.</p>
-            <button class="btn-save" (click)="saveServerUrl()" [disabled]="!localServerUrl">Save & Connect</button>
-            <div class="setup-help">
-              <h4>How to set up offline calling:</h4>
-              <ol>
-                <li>Connect all phones to the same WiFi (e.g., train WiFi)</li>
-                <li>One person runs the server on their laptop</li>
-                <li>Others enter that laptop's IP address above</li>
-                <li>Everyone signs in and can call each other!</li>
-              </ol>
-            </div>
+          </div>
+          <div class="calling-steps">
+            <h4>How to call:</h4>
+            <ol>
+              <li>Both users connect to the same WiFi</li>
+              <li>Both open the app and sign in</li>
+              <li>Go to Calls tab and tap the call button</li>
+              <li>Accept the call on the other phone - done!</li>
+            </ol>
           </div>
         </div>
       </div>
@@ -151,43 +148,20 @@ import { UserDto, OfflineReel } from '../../models/interfaces';
       margin-top: 20px; transition: background 0.3s;
     }
     .btn-logout:hover { background: rgba(255,59,48,0.1); }
-    .network-mode { display: flex; flex-direction: column; gap: 12px; }
-    .mode-description { font-size: 0.85em; color: rgba(255,255,255,0.5); margin: 0; line-height: 1.4; }
-    .mode-toggle { display: flex; gap: 8px; }
-    .mode-btn {
-      flex: 1; padding: 10px; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
-      background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.6);
-      font-size: 0.85em; cursor: pointer; transition: all 0.2s;
+    .calling-info { display: flex; flex-direction: column; gap: 14px; }
+    .calling-feature {
+      display: flex; gap: 12px; padding: 12px; background: rgba(255,255,255,0.04);
+      border-radius: 10px; border: 1px solid rgba(255,255,255,0.08);
     }
-    .mode-btn.active { border-color: #00d2ff; color: #00d2ff; background: rgba(0,210,255,0.1); }
-    .local-config { display: flex; flex-direction: column; gap: 10px; padding-top: 4px; }
-    .local-config label { font-size: 0.85em; color: rgba(255,255,255,0.6); }
-    .input-row { display: flex; gap: 8px; }
-    .server-input {
-      flex: 1; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
-      background: rgba(255,255,255,0.06); color: white; font-size: 0.9em;
+    .feature-icon { font-size: 1.5em; flex-shrink: 0; }
+    .feature-text strong { font-size: 0.9em; display: block; margin-bottom: 4px; }
+    .feature-text p { font-size: 0.8em; color: rgba(255,255,255,0.5); margin: 0; line-height: 1.4; }
+    .calling-steps {
+      padding: 12px; background: rgba(0,210,255,0.06); border-radius: 10px;
+      border: 1px solid rgba(0,210,255,0.15);
     }
-    .server-input::placeholder { color: rgba(255,255,255,0.3); }
-    .btn-test {
-      padding: 10px 16px; border: 1px solid #00d2ff; border-radius: 8px;
-      background: transparent; color: #00d2ff; font-size: 0.85em; cursor: pointer;
-    }
-    .btn-test:disabled { opacity: 0.5; cursor: default; }
-    .btn-save {
-      padding: 12px; border: none; border-radius: 8px;
-      background: linear-gradient(135deg, #00d2ff, #3a7bd5); color: white;
-      font-size: 0.9em; cursor: pointer;
-    }
-    .btn-save:disabled { opacity: 0.5; cursor: default; }
-    .status-msg { font-size: 0.8em; margin: 0; }
-    .status-msg.success { color: #00e676; }
-    .status-msg.error { color: #ff5252; }
-    .setup-help {
-      padding: 12px; background: rgba(255,255,255,0.04); border-radius: 10px;
-      border: 1px solid rgba(255,255,255,0.08);
-    }
-    .setup-help h4 { font-size: 0.85em; margin: 0 0 8px; color: rgba(255,255,255,0.7); }
-    .setup-help ol { margin: 0; padding-left: 20px; font-size: 0.8em; color: rgba(255,255,255,0.5); line-height: 1.6; }
+    .calling-steps h4 { font-size: 0.85em; margin: 0 0 8px; color: #00d2ff; }
+    .calling-steps ol { margin: 0; padding-left: 20px; font-size: 0.8em; color: rgba(255,255,255,0.6); line-height: 1.6; }
   `]
 })
 export class ProfileComponent implements OnInit {
@@ -197,16 +171,9 @@ export class ProfileComponent implements OnInit {
   totalStorageUsed = 0;
   storagePercent = 0;
 
-  // Local network settings
-  isLocalMode = false;
-  localServerUrl = '';
-  connectionStatus: 'none' | 'success' | 'failed' = 'none';
-  isTesting = false;
-
   constructor(
     private authService: AuthService,
     private offlineService: OfflineService,
-    private serverConfig: ServerConfigService,
     private router: Router
   ) {}
 
@@ -218,31 +185,6 @@ export class ProfileComponent implements OnInit {
       this.totalStorageUsed = reels.reduce((acc, r) => acc + (r.blob?.size || 0), 0);
       this.storagePercent = Math.min(100, (this.totalStorageUsed / (500 * 1024 * 1024)) * 100);
     });
-    this.isLocalMode = this.serverConfig.isLocalMode;
-    this.localServerUrl = this.serverConfig.serverUrl;
-  }
-
-  setOnlineMode(): void {
-    this.isLocalMode = false;
-    this.serverConfig.setServerUrl('');
-    this.connectionStatus = 'none';
-  }
-
-  setLocalMode(): void {
-    this.isLocalMode = true;
-  }
-
-  async testConnection(): Promise<void> {
-    this.isTesting = true;
-    this.connectionStatus = 'none';
-    const ok = await this.serverConfig.testConnection(this.localServerUrl);
-    this.connectionStatus = ok ? 'success' : 'failed';
-    this.isTesting = false;
-  }
-
-  saveServerUrl(): void {
-    this.serverConfig.setServerUrl(this.localServerUrl);
-    this.connectionStatus = 'none';
   }
 
   getInitials(name: string): string {
