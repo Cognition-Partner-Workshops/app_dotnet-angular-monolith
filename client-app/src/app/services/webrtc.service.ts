@@ -76,11 +76,16 @@ export class WebRTCService {
       .withUrl('/hubs/call', {
         accessTokenFactory: () => this.authService.getAccessToken() || ''
       })
-      .withAutomaticReconnect()
+      .withAutomaticReconnect([0, 1000, 3000, 5000, 10000, 15000, 30000])
       .configureLogging(signalR.LogLevel.Warning)
       .build();
 
+    // Increase timeouts for connections through proxy
+    this.hubConnection.serverTimeoutInMilliseconds = 120000; // 2 minutes
+    this.hubConnection.keepAliveIntervalInMilliseconds = 30000; // 30 seconds
+
     this.setupSignalRHandlers();
+    this.setupReconnectionHandlers();
 
     try {
       await this.hubConnection.start();
@@ -103,8 +108,38 @@ export class WebRTCService {
     this.hubConnection = null;
   }
 
+  private setupReconnectionHandlers(): void {
+    if (!this.hubConnection) return;
+
+    this.hubConnection.onreconnecting((error) => {
+      console.warn('SignalR reconnecting...', error?.message);
+    });
+
+    this.hubConnection.onreconnected((connectionId) => {
+      console.log('SignalR reconnected with id:', connectionId);
+    });
+
+    this.hubConnection.onclose(async (error) => {
+      console.warn('SignalR connection closed:', error?.message);
+      // Try to reconnect after a delay if we still have a valid token
+      const token = this.authService.getAccessToken();
+      if (token) {
+        setTimeout(() => this.connect(), 5000);
+      }
+    });
+  }
+
   private setupSignalRHandlers(): void {
     if (!this.hubConnection) return;
+
+    // Handle user presence events from CallHub
+    this.hubConnection.on('UserOnline', (userId: number) => {
+      console.log('User online:', userId);
+    });
+
+    this.hubConnection.on('UserOffline', (userId: number) => {
+      console.log('User offline:', userId);
+    });
 
     this.hubConnection.on('ReceiveOffer', (callerId: number, offerJson: string) => {
       this.ngZone.run(() => {
