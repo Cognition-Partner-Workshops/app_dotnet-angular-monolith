@@ -8,16 +8,35 @@ export class OfflineService {
   private dbVersion = 1;
   private db: IDBDatabase | null = null;
 
-  private isOnlineSubject = new BehaviorSubject<boolean>(navigator.onLine);
+  private isOnlineSubject = new BehaviorSubject<boolean>(true);
   isOnline$ = this.isOnlineSubject.asObservable();
 
   private offlineReelsSubject = new BehaviorSubject<OfflineReel[]>([]);
   offlineReels$ = this.offlineReelsSubject.asObservable();
 
+  private offlineDebounce: ReturnType<typeof setTimeout> | null = null;
+
   constructor() {
-    window.addEventListener('online', () => this.isOnlineSubject.next(true));
-    window.addEventListener('offline', () => this.isOnlineSubject.next(false));
+    // When browser says online, trust it immediately
+    window.addEventListener('online', () => {
+      if (this.offlineDebounce) { clearTimeout(this.offlineDebounce); this.offlineDebounce = null; }
+      this.isOnlineSubject.next(true);
+    });
+    // When browser says offline, verify with a server ping before showing banner
+    window.addEventListener('offline', () => {
+      if (this.offlineDebounce) clearTimeout(this.offlineDebounce);
+      this.offlineDebounce = setTimeout(() => this.verifyConnectivity(), 3000);
+    });
     this.initDb();
+  }
+
+  private async verifyConnectivity(): Promise<void> {
+    try {
+      const resp = await fetch('/healthz', { method: 'GET', cache: 'no-store' });
+      this.isOnlineSubject.next(resp.ok);
+    } catch {
+      this.isOnlineSubject.next(false);
+    }
   }
 
   get isOnline(): boolean {
