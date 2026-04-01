@@ -26,8 +26,13 @@ public class CallHub : Hub
         var userId = GetUserId();
         if (userId.HasValue)
         {
-            UserConnections.TryRemove(userId.Value, out _);
-            await Clients.Others.SendAsync("UserOffline", userId.Value);
+            // Only remove if the disconnecting connection is the current one for this user
+            // This prevents a stale tab close from removing an active connection
+            UserConnections.TryRemove(new KeyValuePair<int, string>(userId.Value, Context.ConnectionId));
+            if (!UserConnections.ContainsKey(userId.Value))
+            {
+                await Clients.Others.SendAsync("UserOffline", userId.Value);
+            }
         }
         await base.OnDisconnectedAsync(exception);
     }

@@ -72,6 +72,12 @@ export class WebRTCService {
       return;
     }
 
+    // Clean up any existing connection before creating a new one
+    if (this.hubConnection) {
+      try { await this.hubConnection.stop(); } catch { /* ignore */ }
+      this.hubConnection = null;
+    }
+
     this.hubConnection = new signalR.HubConnectionBuilder()
       .withUrl('/hubs/call', {
         accessTokenFactory: () => this.authService.getAccessToken() || ''
