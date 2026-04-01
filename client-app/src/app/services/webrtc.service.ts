@@ -18,7 +18,6 @@ export class WebRTCService {
   private peerConnection: RTCPeerConnection | null = null;
   private localStream: MediaStream | null = null;
   private remoteStream: MediaStream | null = null;
-  private remoteAudio: HTMLAudioElement | null = null;
 
   private callStateSubject = new BehaviorSubject<WebRTCCallState>('idle');
   callState$ = this.callStateSubject.asObservable();
@@ -39,13 +38,22 @@ export class WebRTCService {
   private currentCallType: string = 'Audio';
   private pendingIceCandidates: RTCIceCandidateInit[] = [];
 
+  // Audio relay properties
+  private relayWs: WebSocket | null = null;
+  private currentCallId: string = '';
+  private captureAudioCtx: AudioContext | null = null;
+  private captureProcessor: ScriptProcessorNode | null = null;
+  private playbackAudioCtx: AudioContext | null = null;
+  private nextPlayTime: number = 0;
+  private readonly RELAY_SAMPLE_RATE = 16000;
+  private readonly RELAY_BUFFER_SIZE = 2048;
+
+  // STUN-only config for WebRTC video (best-effort)
   private readonly rtcConfig: RTCConfiguration = {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun2.l.google.com:19302' },
-      { urls: 'stun:stun3.l.google.com:19302' },
-      { urls: 'stun:stun4.l.google.com:19302' }
+      { urls: 'stun:stun2.l.google.com:19302' }
     ],
     iceCandidatePoolSize: 10
   };
@@ -104,10 +112,16 @@ export class WebRTCService {
       this.ngZone.run(async () => {
         try {
           const answer = JSON.parse(answerJson);
+
+          // Start audio relay with the callId from the answer
+          if (answer.callId && !this.relayWs) {
+            this.currentCallId = answer.callId;
+            this.startAudioRelay();
+          }
+
           if (this.peerConnection && this.peerConnection.signalingState === 'have-local-offer') {
             await this.peerConnection.setRemoteDescription(new RTCSessionDescription(answer.sdp));
             this.callStateSubject.next('connected');
-            // Apply any pending ICE candidates
             for (const candidate of this.pendingIceCandidates) {
               await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
             }
@@ -165,27 +179,40 @@ export class WebRTCService {
     this.callStateSubject.next('calling');
     this.pendingIceCandidates = [];
 
+    // Generate unique call ID for the audio relay
+    this.currentCallId = this.generateCallId();
+
     try {
+      // Prime audio context during user gesture to avoid autoplay blocking
+      this.primeAudioPlayback();
+
       await this.acquireMedia(callType);
       this.createPeerConnection();
 
-      // Add local tracks to peer connection
+      // Add local tracks to peer connection (for video best-effort)
       if (this.localStream && this.peerConnection) {
         this.localStream.getTracks().forEach(track => {
           this.peerConnection!.addTrack(track, this.localStream!);
         });
       }
 
-      // Create and send offer
-      const offer = await this.peerConnection!.createOffer();
+      // Create and send offer with callId
+      const offer = await this.peerConnection!.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: callType === 'Video'
+      });
       await this.peerConnection!.setLocalDescription(offer);
 
       const offerPayload = JSON.stringify({
         sdp: { type: offer.type, sdp: offer.sdp },
-        callType
+        callType,
+        callId: this.currentCallId
       });
 
       await this.hubConnection!.invoke('SendOffer', targetUserId, offerPayload);
+
+      // Start audio relay immediately (caller side)
+      this.startAudioRelay();
     } catch (err) {
       console.error('Error starting call:', err);
       this.callStateSubject.next('failed');
@@ -200,6 +227,10 @@ export class WebRTCService {
     try {
       const offer = JSON.parse(offerJson);
       this.currentCallType = offer.callType || 'Audio';
+      this.currentCallId = offer.callId || this.generateCallId();
+
+      // Prime audio context during user gesture to avoid autoplay blocking
+      this.primeAudioPlayback();
 
       await this.acquireMedia(this.currentCallType);
       this.createPeerConnection();
@@ -220,16 +251,20 @@ export class WebRTCService {
       }
       this.pendingIceCandidates = [];
 
-      // Create and send answer
+      // Create and send answer with callId
       const answer = await this.peerConnection!.createAnswer();
       await this.peerConnection!.setLocalDescription(answer);
 
       const answerPayload = JSON.stringify({
-        sdp: { type: answer.type, sdp: answer.sdp }
+        sdp: { type: answer.type, sdp: answer.sdp },
+        callId: this.currentCallId
       });
 
       await this.hubConnection!.invoke('SendAnswer', callerId, answerPayload);
       this.callStateSubject.next('connected');
+
+      // Start audio relay (callee side)
+      this.startAudioRelay();
     } catch (err) {
       console.error('Error accepting call:', err);
       this.callStateSubject.next('failed');
@@ -257,7 +292,7 @@ export class WebRTCService {
       const audioTrack = this.localStream.getAudioTracks()[0];
       if (audioTrack) {
         audioTrack.enabled = !audioTrack.enabled;
-        return !audioTrack.enabled; // return true if muted
+        return !audioTrack.enabled;
       }
     }
     return false;
@@ -268,7 +303,7 @@ export class WebRTCService {
       const videoTrack = this.localStream.getVideoTracks()[0];
       if (videoTrack) {
         videoTrack.enabled = !videoTrack.enabled;
-        return !videoTrack.enabled; // return true if video off
+        return !videoTrack.enabled;
       }
     }
     return false;
@@ -285,7 +320,6 @@ export class WebRTCService {
       this.localStreamSubject.next(this.localStream);
     } catch (err) {
       console.error('Failed to acquire media:', err);
-      // Fallback: try audio only if video fails
       if (callType === 'Video') {
         try {
           this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
@@ -299,10 +333,152 @@ export class WebRTCService {
     }
   }
 
+  private generateCallId(): string {
+    return Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
+  }
+
+  private primeAudioPlayback(): void {
+    try {
+      if (!this.playbackAudioCtx) {
+        this.playbackAudioCtx = new AudioContext({ sampleRate: this.RELAY_SAMPLE_RATE });
+      }
+      this.playbackAudioCtx.resume();
+
+      const buf = this.playbackAudioCtx.createBuffer(1, 1, this.RELAY_SAMPLE_RATE);
+      const src = this.playbackAudioCtx.createBufferSource();
+      src.buffer = buf;
+      src.connect(this.playbackAudioCtx.destination);
+      src.start(0);
+    } catch (e) {
+      console.warn('Failed to prime audio playback:', e);
+    }
+  }
+
+  // ---- Audio Relay (WebSocket-based, replaces TURN for audio) ----
+
+  private startAudioRelay(): void {
+    if (this.relayWs) return;
+    if (!this.currentCallId || !this.localStream) return;
+
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${proto}//${location.host}/ws/relay?callId=${encodeURIComponent(this.currentCallId)}`;
+    console.log('Connecting to audio relay:', wsUrl);
+
+    this.relayWs = new WebSocket(wsUrl);
+    this.relayWs.binaryType = 'arraybuffer';
+
+    this.relayWs.onopen = () => {
+      console.log('Audio relay connected for call', this.currentCallId);
+      this.startAudioCapture();
+    };
+
+    this.relayWs.onmessage = (event: MessageEvent) => {
+      if (event.data instanceof ArrayBuffer) {
+        this.playReceivedAudio(event.data);
+      }
+    };
+
+    this.relayWs.onerror = (err) => {
+      console.error('Audio relay WebSocket error:', err);
+    };
+
+    this.relayWs.onclose = () => {
+      console.log('Audio relay disconnected');
+    };
+  }
+
+  private startAudioCapture(): void {
+    if (!this.localStream) return;
+
+    try {
+      this.captureAudioCtx = new AudioContext({ sampleRate: this.RELAY_SAMPLE_RATE });
+      const source = this.captureAudioCtx.createMediaStreamSource(this.localStream);
+
+      this.captureProcessor = this.captureAudioCtx.createScriptProcessor(
+        this.RELAY_BUFFER_SIZE, 1, 1
+      );
+
+      this.captureProcessor.onaudioprocess = (e: AudioProcessingEvent) => {
+        if (!this.relayWs || this.relayWs.readyState !== WebSocket.OPEN) return;
+
+        const audioTrack = this.localStream?.getAudioTracks()[0];
+        if (!audioTrack || !audioTrack.enabled) return;
+
+        const pcmFloat = e.inputBuffer.getChannelData(0);
+
+        const int16 = new Int16Array(pcmFloat.length);
+        for (let i = 0; i < pcmFloat.length; i++) {
+          const s = Math.max(-1, Math.min(1, pcmFloat[i]));
+          int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        }
+
+        this.relayWs.send(int16.buffer);
+      };
+
+      source.connect(this.captureProcessor);
+      this.captureProcessor.connect(this.captureAudioCtx.destination);
+      console.log('Audio capture started at', this.RELAY_SAMPLE_RATE, 'Hz');
+    } catch (err) {
+      console.error('Failed to start audio capture:', err);
+    }
+  }
+
+  private playReceivedAudio(data: ArrayBuffer): void {
+    if (!this.playbackAudioCtx) {
+      this.playbackAudioCtx = new AudioContext({ sampleRate: this.RELAY_SAMPLE_RATE });
+    }
+
+    if (this.playbackAudioCtx.state === 'suspended') {
+      this.playbackAudioCtx.resume();
+    }
+
+    const int16 = new Int16Array(data);
+    const float32 = new Float32Array(int16.length);
+    for (let i = 0; i < int16.length; i++) {
+      float32[i] = int16[i] / 0x8000;
+    }
+
+    const buffer = this.playbackAudioCtx.createBuffer(1, float32.length, this.RELAY_SAMPLE_RATE);
+    buffer.getChannelData(0).set(float32);
+
+    const source = this.playbackAudioCtx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(this.playbackAudioCtx.destination);
+
+    const now = this.playbackAudioCtx.currentTime;
+    if (this.nextPlayTime <= now) {
+      this.nextPlayTime = now + 0.05;
+    }
+    source.start(this.nextPlayTime);
+    this.nextPlayTime += buffer.duration;
+  }
+
+  private stopAudioRelay(): void {
+    if (this.captureProcessor) {
+      this.captureProcessor.disconnect();
+      this.captureProcessor = null;
+    }
+    if (this.captureAudioCtx) {
+      this.captureAudioCtx.close().catch(() => {});
+      this.captureAudioCtx = null;
+    }
+    if (this.playbackAudioCtx) {
+      this.playbackAudioCtx.close().catch(() => {});
+      this.playbackAudioCtx = null;
+    }
+    if (this.relayWs) {
+      this.relayWs.close();
+      this.relayWs = null;
+    }
+    this.nextPlayTime = 0;
+  }
+
+  // ---- WebRTC PeerConnection (for video best-effort via STUN) ----
+
   private createPeerConnection(): void {
+    console.log('Creating PeerConnection with STUN (video best-effort)');
     this.peerConnection = new RTCPeerConnection(this.rtcConfig);
 
-    // Handle ICE candidates
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate && this.currentTargetUserId && this.hubConnection) {
         this.hubConnection.invoke(
@@ -313,35 +489,23 @@ export class WebRTCService {
       }
     };
 
-    // Handle remote stream
     this.peerConnection.ontrack = (event) => {
+      console.log('WebRTC ontrack:', event.track.kind);
       this.ngZone.run(() => {
         if (event.streams && event.streams[0]) {
           this.remoteStream = event.streams[0];
         } else {
-          // Some browsers don't populate event.streams
           if (!this.remoteStream) {
             this.remoteStream = new MediaStream();
           }
           this.remoteStream.addTrack(event.track);
         }
         this.remoteStreamSubject.next(this.remoteStream);
-        this.playRemoteAudio(this.remoteStream);
       });
     };
 
-    // Monitor connection state
     this.peerConnection.onconnectionstatechange = () => {
-      this.ngZone.run(() => {
-        const state = this.peerConnection?.connectionState;
-        if (state === 'connected') {
-          this.callStateSubject.next('connected');
-        } else if (state === 'disconnected' || state === 'failed' || state === 'closed') {
-          this.callStateSubject.next('ended');
-          this.cleanupCall();
-          this.callEndedSubject.next();
-        }
-      });
+      console.log('PeerConnection state:', this.peerConnection?.connectionState);
     };
 
     this.peerConnection.oniceconnectionstatechange = () => {
@@ -349,37 +513,15 @@ export class WebRTCService {
     };
   }
 
-  private playRemoteAudio(stream: MediaStream): void {
-    if (!this.remoteAudio) {
-      this.remoteAudio = document.createElement('audio');
-      this.remoteAudio.autoplay = true;
-      this.remoteAudio.setAttribute('playsinline', '');
-      this.remoteAudio.style.display = 'none';
-      document.body.appendChild(this.remoteAudio);
-    }
-    this.remoteAudio.srcObject = stream;
-    this.remoteAudio.play().catch(err => {
-      console.warn('Remote audio autoplay blocked:', err);
-    });
-  }
-
   private cleanupCall(): void {
-    // Stop local media tracks
+    this.stopAudioRelay();
+
     if (this.localStream) {
       this.localStream.getTracks().forEach(track => track.stop());
       this.localStream = null;
       this.localStreamSubject.next(null);
     }
 
-    // Clean up remote audio element
-    if (this.remoteAudio) {
-      this.remoteAudio.pause();
-      this.remoteAudio.srcObject = null;
-      this.remoteAudio.remove();
-      this.remoteAudio = null;
-    }
-
-    // Close peer connection
     if (this.peerConnection) {
       this.peerConnection.close();
       this.peerConnection = null;
@@ -388,6 +530,7 @@ export class WebRTCService {
     this.remoteStream = null;
     this.remoteStreamSubject.next(null);
     this.currentTargetUserId = null;
+    this.currentCallId = '';
     this.pendingIceCandidates = [];
   }
 }
