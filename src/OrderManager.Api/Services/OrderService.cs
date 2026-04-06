@@ -48,9 +48,15 @@ public class OrderService
             var product = await _context.Products.FindAsync(productId)
                 ?? throw new ArgumentException($"Product {productId} not found");
 
+            // Check stock via the inventory microservice before attempting deduction
+            var available = await _inventoryClient.CheckStockAsync(productId, quantity);
+            if (!available)
+                throw new InvalidOperationException($"Insufficient stock for {product.Name}");
+
+            // Deduct stock via the inventory microservice
             var deducted = await _inventoryClient.DeductStockAsync(productId, quantity);
             if (!deducted)
-                throw new InvalidOperationException($"Insufficient stock for {product.Name}");
+                throw new InvalidOperationException($"Failed to deduct stock for {product.Name}");
 
             order.Items.Add(new OrderItem
             {

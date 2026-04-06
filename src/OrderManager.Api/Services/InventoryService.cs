@@ -35,6 +35,14 @@ public class InventoryServiceClient
             ?? throw new InvalidOperationException("Failed to deserialize restock response");
     }
 
+    public async Task<bool> CheckStockAsync(int productId, int quantity)
+    {
+        var response = await _httpClient.GetAsync($"/api/inventory/product/{productId}/check?quantity={quantity}");
+        if (!response.IsSuccessStatusCode) return false;
+        var result = await response.Content.ReadFromJsonAsync<CheckStockResponse>();
+        return result?.Available ?? false;
+    }
+
     public async Task<bool> DeductStockAsync(int productId, int quantity)
     {
         var response = await _httpClient.PostAsJsonAsync($"/api/inventory/product/{productId}/deduct", new { Quantity = quantity });
@@ -59,4 +67,11 @@ public class InventoryDto
     public int ReorderLevel { get; set; }
     public string WarehouseLocation { get; set; } = string.Empty;
     public DateTime LastRestocked { get; set; }
+}
+
+public class CheckStockResponse
+{
+    public int ProductId { get; set; }
+    public int Quantity { get; set; }
+    public bool Available { get; set; }
 }

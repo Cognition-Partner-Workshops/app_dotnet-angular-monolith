@@ -68,17 +68,35 @@ public class OrderServiceTests
 
 internal class FakeInventoryHandler : HttpMessageHandler
 {
-    private readonly bool _deductSuccess;
+    private readonly bool _stockAvailable;
 
-    public FakeInventoryHandler(bool deductSuccess)
+    public FakeInventoryHandler(bool stockAvailable)
     {
-        _deductSuccess = deductSuccess;
+        _stockAvailable = stockAvailable;
     }
 
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        var response = new HttpResponseMessage(_deductSuccess ? HttpStatusCode.OK : HttpStatusCode.BadRequest);
-        response.Content = JsonContent.Create(new { message = _deductSuccess ? "Stock deducted" : "Insufficient stock" });
-        return Task.FromResult(response);
+        var path = request.RequestUri?.AbsolutePath ?? "";
+
+        // Handle CheckStock endpoint
+        if (path.Contains("/check"))
+        {
+            var checkResponse = new { available = _stockAvailable };
+            var response = new HttpResponseMessage(HttpStatusCode.OK);
+            response.Content = JsonContent.Create(checkResponse);
+            return Task.FromResult(response);
+        }
+
+        // Handle DeductStock endpoint
+        if (path.Contains("/deduct"))
+        {
+            var response = new HttpResponseMessage(_stockAvailable ? HttpStatusCode.OK : HttpStatusCode.BadRequest);
+            response.Content = JsonContent.Create(new { message = _stockAvailable ? "Stock deducted" : "Insufficient stock" });
+            return Task.FromResult(response);
+        }
+
+        // Default fallback
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
     }
 }
