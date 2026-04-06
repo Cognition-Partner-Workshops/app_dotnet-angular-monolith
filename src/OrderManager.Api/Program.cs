@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using OrderManager.Api.Clients;
 using OrderManager.Api.Data;
 using OrderManager.Api.Services;
 
