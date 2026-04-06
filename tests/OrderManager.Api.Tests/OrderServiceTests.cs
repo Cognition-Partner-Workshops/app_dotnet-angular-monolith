@@ -81,4 +81,56 @@ public class OrderServiceTests
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 99999) }));
     }
+
+    [Fact]
+    public async Task CreateOrder_CompensatesDeductionsOnPartialFailure()
+    {
+        using var context = CreateContext();
+        var mockInventoryClient = CreateMockInventoryClient();
+        var products = await context.Products.Take(2).ToListAsync();
+        var customer = await context.Customers.FirstAsync();
+
+        // First product deduction succeeds
+        mockInventoryClient
+            .Setup(c => c.DeductStockAsync(products[0].Id, 5))
+            .ReturnsAsync(new InventoryItemDto
+            {
+                Id = 1,
+                ProductId = products[0].Id,
+                ProductName = products[0].Name,
+                QuantityOnHand = 45,
+                ReorderLevel = 10,
+                WarehouseLocation = "A-01"
+            });
+
+        // Second product deduction fails (insufficient stock)
+        mockInventoryClient
+            .Setup(c => c.DeductStockAsync(products[1].Id, 99999))
+            .ThrowsAsync(new InvalidOperationException("Insufficient stock"));
+
+        // Restock compensation should be called for the first product
+        mockInventoryClient
+            .Setup(c => c.RestockAsync(products[0].Id, 5))
+            .ReturnsAsync(new InventoryItemDto
+            {
+                Id = 1,
+                ProductId = products[0].Id,
+                ProductName = products[0].Name,
+                QuantityOnHand = 50,
+                ReorderLevel = 10,
+                WarehouseLocation = "A-01"
+            });
+
+        var service = new OrderService(context, mockInventoryClient.Object);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.CreateOrderAsync(customer.Id, new List<(int, int)>
+            {
+                (products[0].Id, 5),
+                (products[1].Id, 99999)
+            }));
+
+        // Verify compensation was called for the first product
+        mockInventoryClient.Verify(c => c.RestockAsync(products[0].Id, 5), Times.Once);
+    }
 }
