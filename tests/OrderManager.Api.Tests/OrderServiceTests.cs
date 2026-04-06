@@ -2,6 +2,8 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using OrderManager.Api.Data;
 using OrderManager.Api.HttpClients;
 using OrderManager.Api.Models;
@@ -29,12 +31,14 @@ public class OrderServiceTests
         return new InventoryHttpClient(httpClient);
     }
 
+    private static ILogger<OrderService> CreateLogger() => NullLoggerFactory.Instance.CreateLogger<OrderService>();
+
     [Fact]
     public async Task GetAllOrders_ReturnsEmptyList_WhenNoOrders()
     {
         using var context = CreateContext();
         var inventoryClient = CreateMockInventoryClient();
-        var service = new OrderService(context, inventoryClient);
+        var service = new OrderService(context, inventoryClient, CreateLogger());
         var orders = await service.GetAllOrdersAsync();
         Assert.Empty(orders);
     }
@@ -50,7 +54,7 @@ public class OrderServiceTests
             WarehouseLocation = "A-01", LastRestocked = DateTime.UtcNow
         };
         var inventoryClient = CreateMockInventoryClient(HttpStatusCode.OK, deductResponse);
-        var service = new OrderService(context, inventoryClient);
+        var service = new OrderService(context, inventoryClient, CreateLogger());
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
@@ -67,7 +71,7 @@ public class OrderServiceTests
         using var context = CreateContext();
         var errorResponse = new { error = "Insufficient stock" };
         var inventoryClient = CreateMockInventoryClient(HttpStatusCode.Conflict, errorResponse);
-        var service = new OrderService(context, inventoryClient);
+        var service = new OrderService(context, inventoryClient, CreateLogger());
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 

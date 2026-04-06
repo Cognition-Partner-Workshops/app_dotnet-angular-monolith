@@ -1,1 +1,1 @@
-export const environment = { production: false, apiUrl: '', inventoryServiceUrl: 'http://localhost:5001' };
+export const environment = { production: false, apiUrl: '' };

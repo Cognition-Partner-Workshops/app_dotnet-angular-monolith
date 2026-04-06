@@ -13,6 +13,19 @@ public class InventoryItemDto
     public DateTime LastRestocked { get; set; }
 }
 
+public class InventoryServiceException : Exception
+{
+    public int StatusCode { get; }
+    public InventoryServiceException(string message, int statusCode = 503) : base(message)
+    {
+        StatusCode = statusCode;
+    }
+    public InventoryServiceException(string message, Exception inner, int statusCode = 503) : base(message, inner)
+    {
+        StatusCode = statusCode;
+    }
+}
+
 public class InventoryHttpClient
 {
     private readonly HttpClient _httpClient;
@@ -24,46 +37,101 @@ public class InventoryHttpClient
 
     public async Task<List<InventoryItemDto>> GetAllInventoryAsync()
     {
-        var result = await _httpClient.GetFromJsonAsync<List<InventoryItemDto>>("api/inventory");
-        return result ?? new List<InventoryItemDto>();
+        try
+        {
+            var result = await _httpClient.GetFromJsonAsync<List<InventoryItemDto>>("api/inventory");
+            return result ?? new List<InventoryItemDto>();
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new InventoryServiceException("Inventory service is unavailable", ex);
+        }
+        catch (TaskCanceledException ex)
+        {
+            throw new InventoryServiceException("Inventory service request timed out", ex);
+        }
     }
 
     public async Task<InventoryItemDto?> GetInventoryByProductIdAsync(int productId)
     {
-        var response = await _httpClient.GetAsync($"api/inventory/product/{productId}");
-        if (!response.IsSuccessStatusCode)
-            return null;
-        return await response.Content.ReadFromJsonAsync<InventoryItemDto>();
+        try
+        {
+            var response = await _httpClient.GetAsync($"api/inventory/product/{productId}");
+            if (!response.IsSuccessStatusCode)
+                return null;
+            return await response.Content.ReadFromJsonAsync<InventoryItemDto>();
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new InventoryServiceException("Inventory service is unavailable", ex);
+        }
+        catch (TaskCanceledException ex)
+        {
+            throw new InventoryServiceException("Inventory service request timed out", ex);
+        }
     }
 
     public async Task<InventoryItemDto?> RestockAsync(int productId, int quantity)
     {
-        var response = await _httpClient.PostAsJsonAsync($"api/inventory/product/{productId}/restock", new { Quantity = quantity });
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<InventoryItemDto>();
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync($"api/inventory/product/{productId}/restock", new { Quantity = quantity });
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<InventoryItemDto>();
+        }
+        catch (HttpRequestException ex) when (ex.StatusCode is null)
+        {
+            throw new InventoryServiceException("Inventory service is unavailable", ex);
+        }
+        catch (TaskCanceledException ex)
+        {
+            throw new InventoryServiceException("Inventory service request timed out", ex);
+        }
     }
 
     public async Task<InventoryItemDto?> DeductStockAsync(int productId, int quantity)
     {
-        var response = await _httpClient.PostAsJsonAsync($"api/inventory/product/{productId}/deduct", new { Quantity = quantity });
-        if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+        try
         {
-            var error = await response.Content.ReadFromJsonAsync<ErrorResponse>();
-            throw new InvalidOperationException(error?.Error ?? "Insufficient stock");
+            var response = await _httpClient.PostAsJsonAsync($"api/inventory/product/{productId}/deduct", new { Quantity = quantity });
+            if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+            {
+                var error = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+                throw new InvalidOperationException(error?.Error ?? "Insufficient stock");
+            }
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                var error = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+                throw new ArgumentException(error?.Error ?? $"No inventory record for product {productId}");
+            }
+            response.EnsureSuccessStatusCode();
+            return await response.Content.ReadFromJsonAsync<InventoryItemDto>();
         }
-        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        catch (HttpRequestException ex) when (ex.StatusCode is null)
         {
-            var error = await response.Content.ReadFromJsonAsync<ErrorResponse>();
-            throw new ArgumentException(error?.Error ?? $"No inventory record for product {productId}");
+            throw new InventoryServiceException("Inventory service is unavailable", ex);
         }
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<InventoryItemDto>();
+        catch (TaskCanceledException ex)
+        {
+            throw new InventoryServiceException("Inventory service request timed out", ex);
+        }
     }
 
     public async Task<List<InventoryItemDto>> GetLowStockItemsAsync()
     {
-        var result = await _httpClient.GetFromJsonAsync<List<InventoryItemDto>>("api/inventory/low-stock");
-        return result ?? new List<InventoryItemDto>();
+        try
+        {
+            var result = await _httpClient.GetFromJsonAsync<List<InventoryItemDto>>("api/inventory/low-stock");
+            return result ?? new List<InventoryItemDto>();
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new InventoryServiceException("Inventory service is unavailable", ex);
+        }
+        catch (TaskCanceledException ex)
+        {
+            throw new InventoryServiceException("Inventory service request timed out", ex);
+        }
     }
 }
 

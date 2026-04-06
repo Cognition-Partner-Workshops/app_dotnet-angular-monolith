@@ -2,15 +2,15 @@ import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-inventory-list',
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <h2>Inventory <small>(via inventory-service)</small></h2>
-    <div *ngIf="error" class="error">{{ error }}</div>
+    <h2>Inventory</h2>
+    <div *ngIf="error" class="error" style="color:red;margin-bottom:8px">{{ error }}</div>
+    <p *ngIf="loading">Loading inventory...</p>
     <table *ngIf="items.length">
       <thead><tr><th>Product</th><th>On Hand</th><th>Reorder Level</th><th>Location</th><th>Last Restocked</th><th>Actions</th></tr></thead>
       <tbody>
@@ -27,25 +27,32 @@ import { environment } from '../../../environments/environment';
         </tr>
       </tbody>
     </table>
-    <p *ngIf="!items.length && !error">No inventory items found.</p>
+    <p *ngIf="!items.length && !error && !loading">No inventory items found.</p>
   `
 })
 export class InventoryListComponent implements OnInit {
   items: any[] = [];
   error = '';
-  private baseUrl = environment.inventoryServiceUrl || '';
+  loading = true;
 
   constructor(private http: HttpClient) {}
 
   ngOnInit() {
-    this.http.get<any[]>(`${this.baseUrl}/api/inventory`).subscribe({
-      next: data => this.items = data.map(i => ({ ...i, restockQty: 10 })),
-      error: () => this.error = 'Unable to reach inventory service'
+    this.http.get<any[]>('/api/inventory').subscribe({
+      next: data => {
+        this.items = data.map(i => ({ ...i, restockQty: 10 }));
+        this.loading = false;
+      },
+      error: () => {
+        this.error = 'Unable to reach inventory service';
+        this.loading = false;
+      }
     });
   }
 
   restock(item: any) {
-    this.http.post<any>(`${this.baseUrl}/api/inventory/product/${item.productId}/restock`, { quantity: item.restockQty }).subscribe({
+    this.error = '';
+    this.http.post<any>(`/api/inventory/product/${item.productId}/restock`, { quantity: item.restockQty }).subscribe({
       next: updated => {
         item.quantityOnHand = updated.quantityOnHand;
         item.lastRestocked = updated.lastRestocked;
