@@ -54,7 +54,8 @@ public class InventoryHttpClient
     public async Task<InventoryItem?> DeductStockAsync(int productId, int quantity)
     {
         var response = await _httpClient.PostAsJsonAsync($"/api/inventory/product/{productId}/deduct", new { quantity });
-        if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+        if (response.StatusCode == System.Net.HttpStatusCode.BadRequest
+            || response.StatusCode == System.Net.HttpStatusCode.Conflict)
             return null;
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<InventoryItem>();
