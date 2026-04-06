@@ -60,9 +60,9 @@ public class InventoryHttpClient
 
     public async Task<bool> CheckStockAsync(int productId, int quantity)
     {
-        var result = await _httpClient.GetFromJsonAsync<StockCheckResult>(
+        var result = await _httpClient.GetFromJsonAsync<bool>(
             $"api/inventory/product/{productId}/check?quantity={quantity}");
-        return result?.Available ?? false;
+        return result;
     }
 
     public async Task<InventoryItemDto?> DeductStockAsync(int productId, int quantity)
