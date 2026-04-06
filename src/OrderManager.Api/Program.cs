@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Polly;
+using Polly.Extensions.Http;
 using OrderManager.Api.Data;
 using OrderManager.Api.Services;
 
@@ -11,12 +13,42 @@ builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<CustomerService>();
 
+var retryPolicy = HttpPolicyExtensions
+    .HandleTransientHttpError()
+    .WaitAndRetryAsync(
+        retryCount: 3,
+        sleepDurationProvider: attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
+        onRetry: (outcome, delay, attempt, _) =>
+        {
+            Console.WriteLine($"[Polly] Retry {attempt} for inventory-service after {delay.TotalSeconds}s — {outcome.Exception?.Message ?? outcome.Result?.StatusCode.ToString()}");
+        });
+
+var circuitBreakerPolicy = HttpPolicyExtensions
+    .HandleTransientHttpError()
+    .CircuitBreakerAsync(
+        handledEventsAllowedBeforeBreaking: 5,
+        durationOfBreak: TimeSpan.FromSeconds(30),
+        onBreak: (outcome, duration) =>
+        {
+            Console.WriteLine($"[Polly] Circuit OPEN for inventory-service — breaking for {duration.TotalSeconds}s. Reason: {outcome.Exception?.Message ?? outcome.Result?.StatusCode.ToString()}");
+        },
+        onReset: () =>
+        {
+            Console.WriteLine("[Polly] Circuit CLOSED for inventory-service — calls resuming");
+        },
+        onHalfOpen: () =>
+        {
+            Console.WriteLine("[Polly] Circuit HALF-OPEN for inventory-service — testing next call");
+        });
+
 builder.Services.AddHttpClient<InventoryHttpClient>(client =>
 {
     var baseUrl = builder.Configuration["InventoryService:BaseUrl"] ?? "http://localhost:5001";
     client.BaseAddress = new Uri(baseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
-});
+})
+.AddPolicyHandler(retryPolicy)
+.AddPolicyHandler(circuitBreakerPolicy);
 
 builder.Services.AddHealthChecks();
 
