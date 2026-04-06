@@ -30,6 +30,11 @@ public class InventoryHttpClient
     public async Task<InventoryItemDto> RestockAsync(int productId, int quantity)
     {
         var response = await _httpClient.PostAsJsonAsync($"/api/inventory/product/{productId}/restock", new { Quantity = quantity });
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            var error = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+            throw new ArgumentException(error?.Error ?? $"No inventory record for product {productId}");
+        }
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<InventoryItemDto>()
             ?? throw new InvalidOperationException("Failed to deserialize restock response");
