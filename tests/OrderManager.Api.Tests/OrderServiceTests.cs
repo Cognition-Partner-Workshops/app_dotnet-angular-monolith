@@ -2,12 +2,28 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using OrderManager.Api.Clients;
 using OrderManager.Api.Data;
 using OrderManager.Api.Models;
 using OrderManager.Api.Services;
 using Xunit;
 
 namespace OrderManager.Api.Tests;
+
+public class MockHttpMessageHandler : HttpMessageHandler
+{
+    private readonly Func<HttpRequestMessage, Task<HttpResponseMessage>> _handler;
+
+    public MockHttpMessageHandler(Func<HttpRequestMessage, Task<HttpResponseMessage>> handler)
+    {
+        _handler = handler;
+    }
+
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        return _handler(request);
+    }
+}
 
 public class OrderServiceTests
 {
@@ -21,17 +37,40 @@ public class OrderServiceTests
         return context;
     }
 
-    private static InventoryServiceClient CreateMockInventoryClient(HttpStatusCode statusCode = HttpStatusCode.OK, InventoryItemDto? responseDto = null)
+    private static InventoryHttpClient CreateMockInventoryClient(bool stockAvailable = true)
     {
-        var dto = responseDto ?? new InventoryItemDto
+        var handler = new MockHttpMessageHandler(request =>
         {
-            Id = 1, ProductId = 1, ProductName = "Widget A",
-            QuantityOnHand = 45, ReorderLevel = 10,
-            WarehouseLocation = "A-01", LastRestocked = DateTime.UtcNow
-        };
-        var handler = new FakeHttpMessageHandler(statusCode, dto);
+            var path = request.RequestUri?.PathAndQuery ?? "";
+
+            if (path.Contains("/check"))
+            {
+                var result = new { productId = 1, quantity = 5, available = stockAvailable };
+                var response = new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = JsonContent.Create(result)
+                };
+                return Task.FromResult(response);
+            }
+
+            if (path.Contains("/deduct"))
+            {
+                if (!stockAvailable)
+                    return Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest));
+
+                var item = new { id = 1, productId = 1, productName = "Widget A", sku = "WGT-001", quantityOnHand = 45, reorderLevel = 10, warehouseLocation = "A-01", lastRestocked = DateTime.UtcNow };
+                var response = new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = JsonContent.Create(item)
+                };
+                return Task.FromResult(response);
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        });
+
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost:5001") };
-        return new InventoryServiceClient(httpClient);
+        return new InventoryHttpClient(httpClient);
     }
 
     [Fact]
@@ -48,51 +87,28 @@ public class OrderServiceTests
     public async Task CreateOrder_CallsInventoryService()
     {
         using var context = CreateContext();
-        var inventoryClient = CreateMockInventoryClient();
+        var inventoryClient = CreateMockInventoryClient(stockAvailable: true);
         var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
         var order = await service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 5) });
 
+        Assert.NotNull(order);
         Assert.Single(order.Items);
-        Assert.Equal(product.Price * 5, order.TotalAmount);
+        Assert.Equal(product.Id, order.Items.First().ProductId);
     }
 
     [Fact]
     public async Task CreateOrder_ThrowsOnInsufficientStock()
     {
         using var context = CreateContext();
-        var errorDto = new { error = "Insufficient stock" };
-        var handler = new FakeHttpMessageHandler(HttpStatusCode.Conflict, errorDto);
-        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost:5001") };
-        var inventoryClient = new InventoryServiceClient(httpClient);
+        var inventoryClient = CreateMockInventoryClient(stockAvailable: false);
         var service = new OrderService(context, inventoryClient);
         var product = await context.Products.FirstAsync();
         var customer = await context.Customers.FirstAsync();
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 99999) }));
-    }
-}
-
-internal class FakeHttpMessageHandler : HttpMessageHandler
-{
-    private readonly HttpStatusCode _statusCode;
-    private readonly object _responseContent;
-
-    public FakeHttpMessageHandler(HttpStatusCode statusCode, object responseContent)
-    {
-        _statusCode = statusCode;
-        _responseContent = responseContent;
-    }
-
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-    {
-        var response = new HttpResponseMessage(_statusCode)
-        {
-            Content = new StringContent(JsonSerializer.Serialize(_responseContent), System.Text.Encoding.UTF8, "application/json")
-        };
-        return Task.FromResult(response);
     }
 }

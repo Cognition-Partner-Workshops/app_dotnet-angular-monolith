@@ -45,6 +45,5 @@ public class AppDbContext : DbContext
             entity.HasOne(e => e.Product).WithMany(p => p.OrderItems).HasForeignKey(e => e.ProductId);
             entity.Property(e => e.UnitPrice).HasColumnType("decimal(18,2)");
         });
-
     }
 }
