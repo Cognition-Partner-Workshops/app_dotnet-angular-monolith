@@ -11,7 +11,7 @@ import { DatePipe } from '@angular/common';
       <table>
         <thead><tr><th>Product</th><th>On Hand</th><th>Reorder Level</th><th>Location</th><th>Last Restocked</th></tr></thead>
         <tbody>
-          @for (i of items; track i.product?.name) {
+          @for (i of items; track i.id) {
             <tr [class.low-stock]="i.quantityOnHand <= i.reorderLevel">
               <td>{{i.product?.name}}</td><td>{{i.quantityOnHand}}</td><td>{{i.reorderLevel}}</td><td>{{i.warehouseLocation}}</td><td>{{i.lastRestocked | date}}</td>
             </tr>
