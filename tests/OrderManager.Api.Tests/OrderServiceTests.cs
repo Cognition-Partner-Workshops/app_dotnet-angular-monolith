@@ -25,7 +25,7 @@ public class OrderServiceTests
     {
         handler ??= req =>
         {
-            if (req.RequestUri?.PathAndQuery.Contains("/decrement") == true)
+            if (req.RequestUri?.PathAndQuery.Contains("/deduct") == true)
             {
                 return new HttpResponseMessage(HttpStatusCode.OK)
                 {
@@ -57,7 +57,7 @@ public class OrderServiceTests
         var deductCalled = false;
         var inventoryClient = CreateMockInventoryClient(req =>
         {
-            if (req.RequestUri?.PathAndQuery.Contains("/decrement") == true)
+            if (req.RequestUri?.PathAndQuery.Contains("/deduct") == true)
             {
                 deductCalled = true;
                 return new HttpResponseMessage(HttpStatusCode.OK)
@@ -82,7 +82,7 @@ public class OrderServiceTests
         using var context = CreateContext();
         var inventoryClient = CreateMockInventoryClient(req =>
         {
-            if (req.RequestUri?.PathAndQuery.Contains("/decrement") == true)
+            if (req.RequestUri?.PathAndQuery.Contains("/deduct") == true)
             {
                 return new HttpResponseMessage(HttpStatusCode.Conflict)
                 {
