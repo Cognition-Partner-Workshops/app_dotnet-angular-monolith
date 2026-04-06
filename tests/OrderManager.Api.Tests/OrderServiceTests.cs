@@ -36,7 +36,7 @@ internal class FakeInventoryHandler : HttpMessageHandler
             Id = 1,
             ProductId = 1,
             ProductName = "Widget A",
-            ProductSku = "WGT-001",
+            Sku = "WGT-001",
             QuantityOnHand = 45,
             ReorderLevel = 10,
             WarehouseLocation = "A-01",
