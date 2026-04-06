@@ -53,7 +53,7 @@ public class InventoryHttpClient
     public async Task<InventoryItemDto?> DeductStockAsync(int productId, int quantity)
     {
         var response = await _httpClient.PostAsJsonAsync(
-            $"api/inventory/product/{productId}/decrement",
+            $"api/inventory/product/{productId}/deduct",
             new { Quantity = quantity });
 
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
