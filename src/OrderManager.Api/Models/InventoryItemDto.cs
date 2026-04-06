@@ -12,6 +12,12 @@ public class InventoryItemDto
     public int ReorderLevel { get; set; }
     public string WarehouseLocation { get; set; } = string.Empty;
     public DateTime LastRestocked { get; set; }
-    public string ProductName { get; set; } = string.Empty;
-    public string ProductSku { get; set; } = string.Empty;
+    public ProductInfo? Product { get; set; }
+}
+
+public class ProductInfo
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Sku { get; set; } = string.Empty;
 }
