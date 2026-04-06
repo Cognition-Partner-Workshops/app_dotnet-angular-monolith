@@ -139,7 +139,6 @@ internal class FakeInventoryHandler : HttpMessageHandler
                 Id = 1,
                 ProductId = 1,
                 ProductName = "Test Product",
-                Sku = "TST-001",
                 QuantityOnHand = _stockAvailable ? 1000 : 0,
                 ReorderLevel = 10,
                 WarehouseLocation = "A-01",
@@ -163,7 +162,7 @@ internal class FakeInventoryHandler : HttpMessageHandler
             }
             var dto = new InventoryItemDto
             {
-                Id = 1, ProductId = 1, ProductName = "Test Product", Sku = "TST-001",
+                Id = 1, ProductId = 1, ProductName = "Test Product",
                 QuantityOnHand = 995, ReorderLevel = 10, WarehouseLocation = "A-01",
                 LastRestocked = DateTime.UtcNow
             };
