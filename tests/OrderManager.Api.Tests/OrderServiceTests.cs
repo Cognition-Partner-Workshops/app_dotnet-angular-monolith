@@ -45,10 +45,9 @@ public class OrderServiceTests
 
             if (path.Contains("/check"))
             {
-                var result = new { productId = 1, quantity = 5, available = stockAvailable };
                 var response = new HttpResponseMessage(HttpStatusCode.OK)
                 {
-                    Content = JsonContent.Create(result)
+                    Content = JsonContent.Create(stockAvailable)
                 };
                 return Task.FromResult(response);
             }
