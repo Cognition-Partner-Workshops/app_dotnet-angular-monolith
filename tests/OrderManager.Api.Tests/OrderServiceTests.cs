@@ -111,3 +111,72 @@ public class OrderServiceTests
             () => service.CreateOrderAsync(customer.Id, new List<(int, int)> { (product.Id, 99999) }));
     }
 }
+
+/// <summary>
+/// Fake HTTP handler that simulates the inventory-service API responses for testing.
+/// </summary>
+internal class FakeInventoryHandler : HttpMessageHandler
+{
+    private readonly bool _stockAvailable;
+    private readonly bool _deductSucceeds;
+
+    public FakeInventoryHandler(bool stockAvailable, bool deductSucceeds)
+    {
+        _stockAvailable = stockAvailable;
+        _deductSucceeds = deductSucceeds;
+    }
+
+    protected override Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        var path = request.RequestUri?.AbsolutePath ?? "";
+
+        // GET /api/inventory/product/{id} — used by CheckStockAsync
+        if (request.Method == HttpMethod.Get && path.StartsWith("/api/inventory/product/"))
+        {
+            var dto = new InventoryItemDto
+            {
+                Id = 1,
+                ProductId = 1,
+                ProductName = "Test Product",
+                Sku = "TST-001",
+                QuantityOnHand = _stockAvailable ? 1000 : 0,
+                ReorderLevel = 10,
+                WarehouseLocation = "A-01",
+                LastRestocked = DateTime.UtcNow
+            };
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(dto)
+            });
+        }
+
+        // POST /api/inventory/product/{id}/deduct
+        if (request.Method == HttpMethod.Post && path.Contains("/deduct"))
+        {
+            if (!_deductSucceeds)
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest)
+                {
+                    Content = new StringContent("Insufficient stock")
+                });
+            }
+            var dto = new InventoryItemDto
+            {
+                Id = 1, ProductId = 1, ProductName = "Test Product", Sku = "TST-001",
+                QuantityOnHand = 995, ReorderLevel = 10, WarehouseLocation = "A-01",
+                LastRestocked = DateTime.UtcNow
+            };
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = JsonContent.Create(dto)
+            });
+        }
+
+        // Default: OK with empty array
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = JsonContent.Create(Array.Empty<InventoryItemDto>())
+        });
+    }
+}
