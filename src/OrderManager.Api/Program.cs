@@ -1,6 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Http;
 using OrderManager.Api.Data;
 using OrderManager.Api.Services;
+using Polly;
+using Polly.Extensions.Http;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,7 +15,13 @@ builder.Services.AddHttpClient<InventoryHttpClient>(client =>
     var baseUrl = builder.Configuration["InventoryService:BaseUrl"] ?? "http://localhost:5001";
     client.BaseAddress = new Uri(baseUrl);
     client.Timeout = TimeSpan.FromSeconds(30);
-});
+})
+.AddPolicyHandler(HttpPolicyExtensions
+    .HandleTransientHttpError()
+    .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromMilliseconds(200 * Math.Pow(2, retryAttempt))))
+.AddPolicyHandler(HttpPolicyExtensions
+    .HandleTransientHttpError()
+    .CircuitBreakerAsync(5, TimeSpan.FromSeconds(30)));
 
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<ProductService>();
