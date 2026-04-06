@@ -5,6 +5,7 @@ using OrderManager.Api.Data;
 using OrderManager.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+var logger = LoggerFactory.Create(logging => logging.AddConsole()).CreateLogger("Polly");
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=ordermanager.db"));
@@ -20,7 +21,7 @@ var retryPolicy = HttpPolicyExtensions
         sleepDurationProvider: attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
         onRetry: (outcome, delay, attempt, _) =>
         {
-            Console.WriteLine($"[Polly] Retry {attempt} for inventory-service after {delay.TotalSeconds}s — {outcome.Exception?.Message ?? outcome.Result?.StatusCode.ToString()}");
+            logger.LogWarning("Retry {Attempt} for inventory-service after {Delay}s — {Reason}", attempt, delay.TotalSeconds, outcome.Exception?.Message ?? outcome.Result?.StatusCode.ToString());
         });
 
 var circuitBreakerPolicy = HttpPolicyExtensions
@@ -30,15 +31,15 @@ var circuitBreakerPolicy = HttpPolicyExtensions
         durationOfBreak: TimeSpan.FromSeconds(30),
         onBreak: (outcome, duration) =>
         {
-            Console.WriteLine($"[Polly] Circuit OPEN for inventory-service — breaking for {duration.TotalSeconds}s. Reason: {outcome.Exception?.Message ?? outcome.Result?.StatusCode.ToString()}");
+            logger.LogWarning("Circuit OPEN for inventory-service — breaking for {Duration}s. Reason: {Reason}", duration.TotalSeconds, outcome.Exception?.Message ?? outcome.Result?.StatusCode.ToString());
         },
         onReset: () =>
         {
-            Console.WriteLine("[Polly] Circuit CLOSED for inventory-service — calls resuming");
+            logger.LogInformation("Circuit CLOSED for inventory-service — calls resuming");
         },
         onHalfOpen: () =>
         {
-            Console.WriteLine("[Polly] Circuit HALF-OPEN for inventory-service — testing next call");
+            logger.LogInformation("Circuit HALF-OPEN for inventory-service — testing next call");
         });
 
 builder.Services.AddHttpClient<InventoryHttpClient>(client =>
