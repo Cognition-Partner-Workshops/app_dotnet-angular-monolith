@@ -14,13 +14,6 @@ public class InventoryItemDto
     public DateTime LastRestocked { get; set; }
 }
 
-public class StockCheckResult
-{
-    public int ProductId { get; set; }
-    public int Quantity { get; set; }
-    public bool Available { get; set; }
-}
-
 public class InventoryHttpClient
 {
     private readonly HttpClient _httpClient;
@@ -56,13 +49,6 @@ public class InventoryHttpClient
     {
         var items = await _httpClient.GetFromJsonAsync<List<InventoryItemDto>>("api/inventory/low-stock");
         return items ?? new List<InventoryItemDto>();
-    }
-
-    public async Task<bool> CheckStockAsync(int productId, int quantity)
-    {
-        var result = await _httpClient.GetFromJsonAsync<StockCheckResult>(
-            $"api/inventory/product/{productId}/check?quantity={quantity}");
-        return result?.Available ?? false;
     }
 
     public async Task<InventoryItemDto?> DeductStockAsync(int productId, int quantity)
