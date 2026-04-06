@@ -43,26 +43,48 @@ public class OrderService
             ShippingAddress = $"{customer.Address}, {customer.City}, {customer.State} {customer.ZipCode}"
         };
 
-        foreach (var (productId, quantity) in items)
+        // Track successful deductions so we can compensate on failure
+        var deductedItems = new List<(int ProductId, int Quantity)>();
+
+        try
         {
-            var product = await _context.Products.FindAsync(productId)
-                ?? throw new ArgumentException($"Product {productId} not found");
-
-            // Deduct stock via the inventory-service HTTP API
-            await _inventoryClient.DeductStockAsync(productId, quantity);
-
-            order.Items.Add(new OrderItem
+            foreach (var (productId, quantity) in items)
             {
-                ProductId = productId,
-                Quantity = quantity,
-                UnitPrice = product.Price
-            });
-        }
+                var product = await _context.Products.FindAsync(productId)
+                    ?? throw new ArgumentException($"Product {productId} not found");
 
-        order.TotalAmount = order.Items.Sum(i => i.Quantity * i.UnitPrice);
-        _context.Orders.Add(order);
-        await _context.SaveChangesAsync();
-        return order;
+                await _inventoryClient.DeductStockAsync(productId, quantity);
+                deductedItems.Add((productId, quantity));
+
+                order.Items.Add(new OrderItem
+                {
+                    ProductId = productId,
+                    Quantity = quantity,
+                    UnitPrice = product.Price
+                });
+            }
+
+            order.TotalAmount = order.Items.Sum(i => i.Quantity * i.UnitPrice);
+            _context.Orders.Add(order);
+            await _context.SaveChangesAsync();
+            return order;
+        }
+        catch
+        {
+            // Compensate: restock any items that were already deducted
+            foreach (var (productId, quantity) in deductedItems)
+            {
+                try
+                {
+                    await _inventoryClient.RestockAsync(productId, quantity);
+                }
+                catch
+                {
+                    // Best-effort compensation; log in production
+                }
+            }
+            throw;
+        }
     }
 
     public async Task<Order> UpdateOrderStatusAsync(int orderId, string status)
