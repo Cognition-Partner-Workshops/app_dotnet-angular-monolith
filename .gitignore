@@ -1,11 +1,7 @@
-bin/
-obj/
-*.user
-*.suo
-.vs/
 node_modules/
 dist/
-.angular/
+.env
 *.db
-appsettings.Development.json
-package-lock.json
+*.sqlite
+.DS_Store
+uploads/
