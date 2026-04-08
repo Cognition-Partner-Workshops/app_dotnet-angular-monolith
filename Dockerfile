@@ -16,7 +16,7 @@ RUN dotnet restore
 COPY src/ src/
 COPY tests/ tests/
 COPY --from=frontend-build /app/frontend-dist/browser src/OrderManager.Api/wwwroot
-RUN dotnet publish src/OrderManager.Api/OrderManager.Api.csproj -c Release -o /app/publish --no-restore
+RUN dotnet publish src/OrderManager.Api/OrderManager.Api.csproj -c Release -o /app/publish
 
 # Stage 3: Runtime
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
