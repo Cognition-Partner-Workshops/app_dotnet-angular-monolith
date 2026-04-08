@@ -32,6 +32,7 @@ app.UseSwagger();
 app.UseSwaggerUI();
 app.UseCors();
 app.UseStaticFiles();
+app.MapGet("/health", () => Results.Ok(new { status = "Healthy" }));
 app.MapControllers();
 app.MapFallbackToFile("index.html");
 app.Run();
