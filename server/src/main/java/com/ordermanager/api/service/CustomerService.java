@@ -28,6 +28,7 @@ public class CustomerService {
 
     @Transactional
     public Customer createCustomer(Customer customer) {
+        customer.setId(null);
         return customerRepository.save(customer);
     }
 }
