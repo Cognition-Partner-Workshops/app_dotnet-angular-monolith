@@ -21,6 +21,7 @@
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
+            "buildTarget": "client-app:build",
             "proxyConfig": "proxy.conf.json",
             "port": 4200
           }
