@@ -30,19 +30,20 @@ public class DataSeeder implements CommandLineRunner {
 
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         List<InventoryItem> items = List.of(
-                createItem(1, 100, 10, "Warehouse A - Shelf 1", now.minusDays(5)),
-                createItem(2, 50, 15, "Warehouse A - Shelf 2", now.minusDays(3)),
-                createItem(3, 75, 10, "Warehouse B - Shelf 1", now.minusDays(7)),
-                createItem(4, 30, 20, "Warehouse B - Shelf 2", now.minusDays(1)),
-                createItem(5, 200, 25, "Warehouse C - Shelf 1", now.minusDays(10))
+                createItem(1, "Widget A", 100, 10, "Warehouse A - Shelf 1", now.minusDays(5)),
+                createItem(2, "Widget B", 50, 15, "Warehouse A - Shelf 2", now.minusDays(3)),
+                createItem(3, "Gadget X", 75, 10, "Warehouse B - Shelf 1", now.minusDays(7)),
+                createItem(4, "Gadget Y", 30, 20, "Warehouse B - Shelf 2", now.minusDays(1)),
+                createItem(5, "Thingamajig", 200, 25, "Warehouse C - Shelf 1", now.minusDays(10))
         );
         inventoryRepository.saveAll(items);
     }
 
-    private InventoryItem createItem(Integer productId, Integer quantity, Integer reorderLevel,
-                                     String location, LocalDateTime lastRestocked) {
+    private InventoryItem createItem(Integer productId, String productName, Integer quantity,
+                                     Integer reorderLevel, String location, LocalDateTime lastRestocked) {
         InventoryItem item = new InventoryItem();
         item.setProductId(productId);
+        item.setProductName(productName);
         item.setQuantityOnHand(quantity);
         item.setReorderLevel(reorderLevel);
         item.setWarehouseLocation(location);

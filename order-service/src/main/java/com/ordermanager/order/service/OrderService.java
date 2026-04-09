@@ -56,8 +56,11 @@ public class OrderService {
                 + ", " + Objects.toString(customer.get("state"), "")
                 + " " + Objects.toString(customer.get("zipCode"), "");
 
+        String customerName = Objects.toString(customer.get("name"), "");
+
         CustomerOrder order = new CustomerOrder();
         order.setCustomerId(request.getCustomerId());
+        order.setCustomerName(customerName);
         order.setOrderDate(LocalDateTime.now(ZoneOffset.UTC));
         order.setStatus("Pending");
         order.setShippingAddress(shippingAddress);
@@ -78,6 +81,9 @@ public class OrderService {
 
                 BigDecimal unitPrice;
                 Object priceObj = product.get("price");
+                if (priceObj == null) {
+                    throw new IllegalArgumentException("Product " + itemRequest.getProductId() + " has no price");
+                }
                 if (priceObj instanceof Number) {
                     unitPrice = BigDecimal.valueOf(((Number) priceObj).doubleValue());
                 } else {

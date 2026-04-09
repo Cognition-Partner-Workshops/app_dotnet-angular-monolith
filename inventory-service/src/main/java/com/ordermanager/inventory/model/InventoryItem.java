@@ -21,6 +21,9 @@ public class InventoryItem {
     @Column(name = "product_id", nullable = false, unique = true)
     private Integer productId;
 
+    @Column(name = "product_name", length = 200)
+    private String productName;
+
     @Column(name = "quantity_on_hand", nullable = false)
     private Integer quantityOnHand = 0;
 
@@ -43,6 +46,8 @@ public class InventoryItem {
     public void setId(Integer id) { this.id = id; }
     public Integer getProductId() { return productId; }
     public void setProductId(Integer productId) { this.productId = productId; }
+    public String getProductName() { return productName; }
+    public void setProductName(String productName) { this.productName = productName; }
     public Integer getQuantityOnHand() { return quantityOnHand; }
     public void setQuantityOnHand(Integer quantityOnHand) { this.quantityOnHand = quantityOnHand; }
     public Integer getReorderLevel() { return reorderLevel; }

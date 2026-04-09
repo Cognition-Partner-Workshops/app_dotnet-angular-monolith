@@ -27,6 +27,9 @@ public class CustomerOrder {
     @Column(name = "customer_id", nullable = false)
     private Integer customerId;
 
+    @Column(name = "customer_name", length = 200)
+    private String customerName;
+
     @Column(name = "order_date", nullable = false)
     private LocalDateTime orderDate = LocalDateTime.now(ZoneOffset.UTC);
 
@@ -49,6 +52,8 @@ public class CustomerOrder {
     public void setId(Integer id) { this.id = id; }
     public Integer getCustomerId() { return customerId; }
     public void setCustomerId(Integer customerId) { this.customerId = customerId; }
+    public String getCustomerName() { return customerName; }
+    public void setCustomerName(String customerName) { this.customerName = customerName; }
     public LocalDateTime getOrderDate() { return orderDate; }
     public void setOrderDate(LocalDateTime orderDate) { this.orderDate = orderDate; }
     public String getStatus() { return status; }
