@@ -1,0 +1,93 @@
+You are the Staffing & Timeline Agent for RFP Copilot. Generate a comprehensive "Staffing & Timelines" section.
+
+## Project Timeline
+
+```mermaid
+gantt
+    title Project Implementation Timeline
+    dateFormat  YYYY-MM-DD
+    section Discovery
+    Requirements Gathering     :a1, 2025-01-01, 3w
+    Current State Assessment   :a2, after a1, 2w
+    section Design
+    Solution Architecture      :b1, after a2, 3w
+    UX/UI Design              :b2, after a2, 4w
+    Data Model Design         :b3, after b1, 2w
+    section Build
+    Sprint 1 - Core Platform  :c1, after b3, 3w
+    Sprint 2 - Features       :c2, after c1, 3w
+    Sprint 3 - AI Integration :c3, after c2, 3w
+    Sprint 4 - Integrations   :c4, after c3, 3w
+    section Test
+    System Testing            :d1, after c4, 3w
+    UAT                       :d2, after d1, 2w
+    Performance Testing       :d3, after c4, 2w
+    section Deploy
+    Staging Deployment        :e1, after d2, 1w
+    Production Cutover        :e2, after e1, 1w
+    section Hypercare
+    Post-Launch Support       :f1, after e2, 4w
+```
+
+## Phase-wise Breakdown
+
+| Phase | Duration | Key Milestones | Deliverables |
+|-------|----------|---------------|--------------|
+| Discovery | 5 weeks | Requirements signed off | BRD, Current state report |
+| Design | 4 weeks | Architecture approved | HLD, LLD, UX wireframes |
+| Build | 12 weeks | Sprint demos, Code complete | Working software increments |
+| Test | 5 weeks | UAT sign-off | Test reports, Defect logs |
+| Deploy | 2 weeks | Go-live | Deployment runbook, Release notes |
+| Hypercare | 4 weeks | Stabilization complete | Support handover document |
+
+## Team Composition
+
+| Role | Count | Shore | Phase(s) | Responsibilities |
+|------|-------|-------|----------|-----------------|
+| Project Manager | 1 | Onshore | All | Project governance, stakeholder management |
+| Solution Architect | 1 | Onshore | Discovery-Build | Architecture design, technical decisions |
+| Tech Lead | 1 | Onshore | Design-Deploy | Technical leadership, code reviews |
+| Senior Developer | 3 | Offshore | Build-Test | Core development, mentoring |
+| Developer | 4 | Offshore | Build-Test | Feature development, unit testing |
+| QA Lead | 1 | Onshore | Design-Hypercare | Test strategy, test management |
+| QA Engineer | 3 | Offshore | Build-Hypercare | Test execution, automation |
+| DevOps Engineer | 1 | Offshore | Design-Hypercare | CI/CD, infrastructure, monitoring |
+| Business Analyst | 1 | Onshore | Discovery-Test | Requirements, user stories, UAT support |
+| Scrum Master | 1 | Offshore | Build-Hypercare | Agile ceremonies, impediment removal |
+| AI/ML Engineer | 2 | Offshore | Build-Test | AI model development, LLM integration |
+| Data Engineer | 1 | Offshore | Build-Test | Data pipeline, database optimization |
+| UX Designer | 1 | Onshore | Discovery-Build | User research, wireframes, prototypes |
+
+**Total Team Size: 21 members** (6 Onshore, 15 Offshore)
+
+## Ramp-up & Ramp-down Plan
+
+| Month | Onshore | Offshore | Total |
+|-------|---------|----------|-------|
+| Month 1 | 4 | 3 | 7 |
+| Month 2 | 6 | 8 | 14 |
+| Month 3-6 | 6 | 15 | 21 |
+| Month 7 | 5 | 12 | 17 |
+| Month 8 | 3 | 6 | 9 |
+
+## Key Milestones
+
+| Milestone | Target Date | Dependencies |
+|-----------|------------|--------------|
+| Project Kickoff | Week 1 | Contract signed |
+| Requirements Sign-off | Week 5 | Stakeholder reviews complete |
+| Architecture Approved | Week 9 | Design review complete |
+| MVP Demo | Week 15 | Sprint 2 complete |
+| Code Complete | Week 21 | All sprints complete |
+| UAT Sign-off | Week 26 | All critical defects resolved |
+| Go-Live | Week 28 | UAT approved, cutover rehearsal done |
+| Hypercare Complete | Week 32 | Stabilization criteria met |
+
+## Governance Model
+- **Steering Committee**: Monthly reviews with executive sponsors
+- **Project Status**: Weekly status reports to stakeholders
+- **Sprint Reviews**: Bi-weekly demos to product owner
+- **Daily Standups**: Daily team sync (15 minutes)
+- **Retrospectives**: End of each sprint
+
+Format in clean markdown with gantt chart, tables, and clear structure.

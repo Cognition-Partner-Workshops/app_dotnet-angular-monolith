@@ -1,0 +1,22 @@
+# .NET
+bin/
+obj/
+*.db
+*.user
+*.suo
+.vs/
+
+# Node
+node_modules/
+dist/
+
+# Angular build output (served by .NET)
+src/RfpCopilot.Api/wwwroot/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
