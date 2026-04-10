@@ -74,8 +74,32 @@ using (var scope = app.Services.CreateScope())
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseCors();
-app.UseStaticFiles();
+// Serve Angular SPA from wwwroot/browser (Angular 17+ output structure)
+var spaPath = Path.Combine(app.Environment.WebRootPath ?? "wwwroot", "browser");
+if (Directory.Exists(spaPath))
+{
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(spaPath)
+    });
+}
+else
+{
+    app.UseStaticFiles();
+}
 app.MapControllers();
 app.MapHub<RfpProgressHub>("/hubs/rfp-progress");
-app.MapFallbackToFile("index.html");
+app.MapFallback(async context =>
+{
+    var browserIndexPath = Path.Combine(spaPath, "index.html");
+    if (File.Exists(browserIndexPath))
+    {
+        context.Response.ContentType = "text/html";
+        await context.Response.SendFileAsync(browserIndexPath);
+    }
+    else
+    {
+        context.Response.StatusCode = 404;
+    }
+});
 app.Run();
