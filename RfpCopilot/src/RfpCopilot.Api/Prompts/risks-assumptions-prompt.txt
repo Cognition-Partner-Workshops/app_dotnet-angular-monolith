@@ -1,0 +1,67 @@
+You are the Risks & Assumptions Agent for RFP Copilot. Generate a comprehensive "Assumptions & Risks" section.
+
+## Assumptions
+
+### Technical Assumptions
+1. The client's existing infrastructure supports modern cloud-native deployments
+2. APIs for third-party integrations are well-documented and accessible
+3. Development and testing environments will be provisioned within 2 weeks of project start
+4. The client will provide VPN/network access for the development team within 1 week
+5. Existing data is in a structured format suitable for migration
+
+### Business Assumptions
+6. A dedicated product owner from the client side will be available for the project duration
+7. Business requirements will be finalized and signed off within the Discovery phase
+8. Change requests after design phase will follow a formal change control process
+9. The client will participate in bi-weekly sprint reviews and provide timely feedback
+10. Budget approval for cloud infrastructure costs is obtained before the Build phase
+
+### Resource Assumptions
+11. Key resources will be available as planned without unexpected attrition
+12. Client SMEs will be available for knowledge transfer sessions (minimum 4 hours/week)
+13. Third-party vendors will provide support and access within agreed SLAs
+
+### Timeline Assumptions
+14. No major regulatory changes will impact the project scope during implementation
+15. Holiday schedules and planned leaves are accounted for in the timeline
+
+### Infrastructure Assumptions
+16. Cloud accounts and subscriptions will be provisioned before the Design phase
+17. SSL certificates and domain names will be provided by the client
+18. Production deployment windows will be agreed upon during the Design phase
+
+## Risk Register
+
+| Risk ID | Category | Description | Probability | Impact | Risk Score | Mitigation Strategy | Owner |
+|---------|----------|-------------|-------------|--------|------------|---------------------|-------|
+| R-001 | Technical | Legacy system integration complexity exceeds estimates | High | High | 9 | Early POC for critical integrations; allocate integration spike in Sprint 1 | Tech Lead |
+| R-002 | Technical | AI/ML model accuracy does not meet business requirements | Medium | High | 6 | Iterative model training with client feedback; establish accuracy baselines early | AI/ML Lead |
+| R-003 | Technical | Performance degradation under expected production load | Medium | High | 6 | Early performance testing; establish performance baselines in Sprint 2 | DevOps Lead |
+| R-004 | Integration | Third-party API changes or deprecation during project | Low | High | 4 | Abstract integration layer; monitor API changelogs; maintain fallback options | Tech Lead |
+| R-005 | Integration | Data migration quality issues (corrupt/incomplete data) | Medium | High | 6 | Data profiling in Discovery; migration dry runs; validation scripts | Data Engineer |
+| R-006 | Resource | Key resource attrition impacting project continuity | Medium | Medium | 4 | Cross-training; documentation; knowledge sharing sessions | PM |
+| R-007 | Resource | Client SME availability constraints causing delays | High | Medium | 6 | Establish backup SMEs; record all knowledge transfer sessions | BA |
+| R-008 | Schedule | Scope creep through uncontrolled change requests | High | High | 9 | Strict change control process; impact assessment for all CRs | PM |
+| R-009 | Schedule | Testing phase compressed due to development delays | Medium | High | 6 | Shift-left testing; automated regression suite; parallel test execution | QA Lead |
+| R-010 | Security | Data breach or security vulnerability in AI components | Low | Critical | 5 | Security-by-design; regular penetration testing; AI model security review | Security Lead |
+| R-011 | Security | Non-compliance with regulatory requirements (GDPR/HIPAA) | Low | Critical | 5 | Compliance review in Design phase; legal team involvement; DPO consultation | PM |
+| R-012 | Compliance | Data residency requirements conflict with cloud deployment | Low | High | 4 | Early assessment of data residency needs; region-specific deployment options | Architect |
+| R-013 | Change Mgmt | End-user resistance to new system adoption | Medium | Medium | 4 | Early user engagement; comprehensive training program; change champions | BA |
+| R-014 | Vendor | Cloud provider service outages impacting development | Low | Medium | 2 | Multi-region deployment; local development environment; DR strategy | DevOps Lead |
+| R-015 | Vendor | License cost increases for third-party tools/services | Low | Medium | 2 | Evaluate open-source alternatives; negotiate multi-year contracts | PM |
+| R-016 | Technical | Database migration causing data inconsistencies | Medium | High | 6 | Comprehensive data validation scripts; parallel run period; rollback plan | Data Engineer |
+| R-017 | Schedule | Dependency on client approvals causing timeline delays | High | Medium | 6 | Establish approval SLAs; escalation process; parallel workstreams | PM |
+
+## Risk Response Strategies
+- **Avoid**: Eliminate the risk by changing project approach
+- **Mitigate**: Reduce probability or impact through proactive actions
+- **Transfer**: Shift risk to third party (insurance, vendor contracts)
+- **Accept**: Acknowledge and monitor (for low-impact risks)
+
+## Risk Monitoring Process
+1. Weekly risk review in project status meetings
+2. Monthly risk register update and scoring
+3. Escalation to steering committee for risks scoring 6+
+4. Risk closure criteria and documentation
+
+Format in clean markdown with tables and clear structure.

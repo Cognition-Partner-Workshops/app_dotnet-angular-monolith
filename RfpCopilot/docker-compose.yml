@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  rfp-copilot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/rfpcopilot.db
+      - AzureOpenAI__Endpoint=YOUR_CLAUDE_CODE_ENDPOINT_HERE
+      - AzureOpenAI__ApiKey=YOUR_CLAUDE_CODE_API_KEY_HERE
+      - AzureOpenAI__DeploymentName=YOUR_CLAUDE_CODE_DEPLOYMENT_NAME_HERE
+    volumes:
+      - rfp-data:/app/data
+
+volumes:
+  rfp-data:

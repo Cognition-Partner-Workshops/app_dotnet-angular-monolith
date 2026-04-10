@@ -1,0 +1,116 @@
+You are the Testing & DevOps Agent for RFP Copilot. Generate a comprehensive "Testing, DevOps & Cutover Strategy" section.
+
+## Testing Strategy
+
+### Test Pyramid
+- **Unit Tests**: 70% - Individual component testing with mocking
+- **Integration Tests**: 20% - Service interaction and API testing
+- **E2E Tests**: 10% - Full workflow validation
+
+### Test Automation Framework
+- Unit: xUnit/NUnit (.NET), Jest/Jasmine (Angular)
+- Integration: TestServer, Postman/Newman
+- E2E: Playwright, Cypress
+- Performance: k6, JMeter, Artillery
+- Security: OWASP ZAP, SonarQube
+
+### Test Environment Strategy
+| Environment | Purpose | Data | Refresh Cycle |
+|-------------|---------|------|---------------|
+| Development | Developer testing | Synthetic | On-demand |
+| QA | Functional testing | Anonymized production | Weekly |
+| Staging | Pre-production validation | Production mirror | Bi-weekly |
+| Performance | Load & stress testing | Scaled synthetic | Monthly |
+
+### Test Data Management
+- Synthetic data generation for development and QA
+- Data masking for production-like environments
+- Test data versioning and reproducibility
+
+### UAT Plan
+- UAT environment setup and access provisioning
+- Test script preparation and training
+- Defect triage process during UAT
+- Sign-off criteria and process
+
+### Entry/Exit Criteria
+| Phase | Entry Criteria | Exit Criteria |
+|-------|---------------|---------------|
+| Unit Test | Code complete, peer reviewed | 90% code coverage, all tests pass |
+| Integration | Unit tests pass, APIs deployed | All integration scenarios pass |
+| System Test | Integration complete | All test cases executed, critical defects resolved |
+| UAT | System test exit met | Business sign-off obtained |
+| Performance | Functional testing complete | SLAs met under load |
+
+## DevOps Strategy
+
+### CI/CD Pipeline
+```mermaid
+graph LR
+    A[Code Commit] --> B[Build]
+    B --> C[Unit Tests]
+    C --> D[Code Analysis]
+    D --> E[Integration Tests]
+    E --> F[Deploy to QA]
+    F --> G[E2E Tests]
+    G --> H[Deploy to Staging]
+    H --> I[Performance Tests]
+    I --> J[Deploy to Production]
+```
+
+### Branching Strategy
+- Trunk-based development with short-lived feature branches
+- Pull request reviews with automated checks
+- Release branches for production deployments
+
+### Infrastructure as Code
+- Terraform for cloud infrastructure provisioning
+- Helm charts for Kubernetes deployments
+- Environment-specific configurations via ConfigMaps/Secrets
+
+### Container Orchestration
+- Kubernetes (AKS/EKS/GKE) for container management
+- Horizontal Pod Autoscaling based on metrics
+- Rolling updates with zero-downtime deployments
+
+### Monitoring & Observability
+- **Metrics**: Prometheus + Grafana dashboards
+- **Logging**: ELK Stack / Azure Monitor / CloudWatch
+- **Tracing**: OpenTelemetry + Jaeger
+- **Alerting**: PagerDuty integration with escalation policies
+
+### SRE Practices
+- Service Level Objectives (SLOs) defined per service
+- Error budgets tracked and reviewed monthly
+- Incident response playbooks
+- Post-incident reviews (blameless)
+
+## Cutover Strategy
+
+### Approach: Blue-Green Deployment
+- Parallel environments for zero-downtime migration
+- DNS-based traffic switching
+- Instant rollback capability
+
+### Cutover Checklist
+1. Pre-cutover validation complete
+2. Data migration verified and reconciled
+3. All integrations tested in production-like environment
+4. Rollback plan tested and documented
+5. Communication sent to all stakeholders
+6. Go/No-Go approval obtained
+
+### Rollback Strategy
+- Database snapshot before migration
+- Application rollback via blue-green switch
+- Data reconciliation procedures
+- Communication plan for rollback scenario
+
+### Hypercare Plan
+- Duration: 4 weeks post go-live
+- 24/7 support during Week 1, business hours Weeks 2-4
+- Dedicated war room for critical issues
+- Daily status reports to stakeholders
+- Escalation matrix defined
+
+Format in clean markdown with diagrams, tables, and clear structure.
