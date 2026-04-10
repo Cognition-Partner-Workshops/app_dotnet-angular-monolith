@@ -41,7 +41,7 @@ builder.Services.AddScoped<IntegrationAgent>();
 builder.Services.AddScoped<TestingDevOpsAgent>();
 builder.Services.AddScoped<StaffingTimelineAgent>();
 builder.Services.AddScoped<RisksAssumptionsAgent>();
-builder.Services.AddScoped<OrchestratorAgent>();
+builder.Services.AddSingleton<OrchestratorAgent>();
 
 // Controllers & SignalR
 builder.Services.AddControllers().AddJsonOptions(options =>

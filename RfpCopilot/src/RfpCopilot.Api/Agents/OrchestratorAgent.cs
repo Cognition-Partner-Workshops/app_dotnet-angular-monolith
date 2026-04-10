@@ -11,13 +11,13 @@ namespace RfpCopilot.Api.Agents;
 public class OrchestratorAgent
 {
     private readonly Kernel _kernel;
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<OrchestratorAgent> _logger;
 
-    public OrchestratorAgent(Kernel kernel, IServiceProvider serviceProvider, ILogger<OrchestratorAgent> logger)
+    public OrchestratorAgent(Kernel kernel, IServiceScopeFactory scopeFactory, ILogger<OrchestratorAgent> logger)
     {
         _kernel = kernel;
-        _serviceProvider = serviceProvider;
+        _scopeFactory = scopeFactory;
         _logger = logger;
     }
 
@@ -25,7 +25,7 @@ public class OrchestratorAgent
     {
         _logger.LogInformation("OrchestratorAgent starting processing for RFP document {Id}", rfpDocumentId);
 
-        using var scope = _serviceProvider.CreateScope();
+        using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var responseAssembler = scope.ServiceProvider.GetRequiredService<IResponseAssemblerService>();
         var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<RfpProgressHub>>();
@@ -87,25 +87,30 @@ public class OrchestratorAgent
             ("RisksAssumptionsAgent", s => s.ServiceProvider.GetRequiredService<RisksAssumptionsAgent>())
         };
 
+        // Create all agent scopes and tasks upfront to avoid disposed scope issues
+        var agentScopes = new List<IServiceScope>();
         foreach (var (name, factory) in agents)
         {
             await LogAgentStart(context, hubContext, rfpDocumentId, name);
+            var agentScope = _scopeFactory.CreateScope();
+            agentScopes.Add(agentScope);
+            var capturedName = name;
+            var capturedScope = agentScope;
             contentTasks.Add(Task.Run(async () =>
             {
                 try
                 {
-                    using var agentScope = _serviceProvider.CreateScope();
-                    var agent = factory(agentScope);
+                    var agent = factory(capturedScope);
                     var result = await agent.ExecuteAsync(agentTask);
                     return result;
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "{AgentName} failed", name);
+                    _logger.LogError(ex, "{AgentName} failed", capturedName);
                     return new AgentResult
                     {
-                        AgentName = name,
-                        SectionTitle = name.Replace("Agent", ""),
+                        AgentName = capturedName,
+                        SectionTitle = capturedName.Replace("Agent", ""),
                         Content = $"Error generating section: {ex.Message}",
                         Success = false,
                         ErrorMessage = ex.Message
@@ -115,6 +120,13 @@ public class OrchestratorAgent
         }
 
         var contentResults = await Task.WhenAll(contentTasks);
+
+        // Dispose all agent scopes
+        foreach (var agentScope in agentScopes)
+        {
+            agentScope.Dispose();
+        }
+
         foreach (var result in contentResults)
         {
             results.Add(result);
@@ -139,7 +151,7 @@ public class OrchestratorAgent
 
     public async Task RegenerateSectionAsync(int rfpDocumentId, int sectionNumber)
     {
-        using var scope = _serviceProvider.CreateScope();
+        using var scope = _scopeFactory.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var responseAssembler = scope.ServiceProvider.GetRequiredService<IResponseAssemblerService>();
         var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<RfpProgressHub>>();
