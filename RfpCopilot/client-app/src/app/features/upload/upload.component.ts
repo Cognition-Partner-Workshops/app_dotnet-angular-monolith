@@ -123,9 +123,10 @@ import { RfpApiService } from '../../shared/services/rfp-api.service';
 
           <mat-card-actions align="end">
             <button mat-raised-button color="primary" (click)="submitRfp()" 
-                    [disabled]="isUploading || !selectedFile || !clientName || !originatorEmail">
-              <mat-icon>send</mat-icon>
-              {{ isUploading ? 'Processing...' : 'Submit RFP' }}
+                    [disabled]="isUploading || !selectedFile || !clientName || !originatorEmail"
+                    class="generate-btn">
+              <mat-icon>{{ isUploading ? 'hourglass_top' : 'auto_awesome' }}</mat-icon>
+              {{ isUploading ? 'Generating Response...' : 'Generate RFP Response' }}
             </button>
           </mat-card-actions>
         </mat-card>
@@ -150,8 +151,8 @@ import { RfpApiService } from '../../shared/services/rfp-api.service';
             </mat-list-item>
           </mat-list>
           <div class="status-actions" *ngIf="processingStatus.status === 'Completed' || processingStatus.status === 'Draft - Pending CRM ID'">
-            <button mat-raised-button color="accent" (click)="viewResponse()">
-              <mat-icon>visibility</mat-icon> View Response
+            <button mat-raised-button color="accent" (click)="viewResponse()" class="view-response-btn">
+              <mat-icon>visibility</mat-icon> View Generated RFP Response
             </button>
           </div>
         </mat-card-content>
@@ -204,6 +205,9 @@ import { RfpApiService } from '../../shared/services/rfp-api.service';
     .status-actions { margin-top: 16px; text-align: center; }
     .clickable { cursor: pointer; }
     .clickable:hover { background: #f5f5f5; }
+    .generate-btn { font-size: 15px; padding: 8px 24px; }
+    .view-response-btn { font-size: 16px; padding: 10px 32px; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
     mat-icon.completed { color: #4caf50; }
     mat-icon.inprogress { color: #ff9800; }
     mat-icon.failed { color: #f44336; }
