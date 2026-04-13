@@ -2,6 +2,7 @@ package com.ordermanager.service;
 
 import com.ordermanager.model.InventoryItem;
 import com.ordermanager.repository.InventoryItemRepository;
+import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +33,7 @@ public class InventoryService {
         InventoryItem item = inventoryItemRepository.findByProductId(productId)
                 .orElseThrow(() -> {
                     log.warn("No inventory record found for product {}", productId);
-                    return new IllegalArgumentException("No inventory record for product " + productId);
+                    return new EntityNotFoundException("No inventory record for product " + productId);
                 });
         item.setQuantityOnHand(item.getQuantityOnHand() + quantity);
         item.setLastRestocked(LocalDateTime.now());

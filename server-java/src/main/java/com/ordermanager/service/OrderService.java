@@ -3,6 +3,7 @@ package com.ordermanager.service;
 import com.ordermanager.dto.OrderItemRequest;
 import com.ordermanager.model.*;
 import com.ordermanager.repository.*;
+import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,7 +46,7 @@ public class OrderService {
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> {
                     log.warn("Customer {} not found", customerId);
-                    return new IllegalArgumentException("Customer " + customerId + " not found");
+                    return new EntityNotFoundException("Customer " + customerId + " not found");
                 });
 
         Order order = new Order();
@@ -58,7 +59,7 @@ public class OrderService {
             Product product = productRepository.findById(itemRequest.productId())
                     .orElseThrow(() -> {
                         log.warn("Product {} not found", itemRequest.productId());
-                        return new IllegalArgumentException("Product " + itemRequest.productId() + " not found");
+                        return new EntityNotFoundException("Product " + itemRequest.productId() + " not found");
                     });
 
             InventoryItem inventory = inventoryItemRepository.findByProductId(itemRequest.productId())
@@ -101,7 +102,7 @@ public class OrderService {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> {
                     log.warn("Order {} not found for status update", id);
-                    return new IllegalArgumentException("Order " + id + " not found");
+                    return new EntityNotFoundException("Order " + id + " not found");
                 });
         order.setStatus(status);
         Order saved = orderRepository.save(order);
