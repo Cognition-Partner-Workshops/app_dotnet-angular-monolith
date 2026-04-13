@@ -2,6 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 
+/**
+ * Displays a table of all orders with customer name, date, status, and total amount.
+ * Data is fetched from the `/api/orders` endpoint on initialization.
+ */
 @Component({
   selector: 'app-order-list',
   standalone: true,
@@ -20,7 +24,11 @@ import { CommonModule } from '@angular/common';
   `
 })
 export class OrderListComponent implements OnInit {
+  /** The list of orders retrieved from the API. */
   orders: any[] = [];
+
   constructor(private http: HttpClient) {}
+
+  /** Fetches all orders from the backend on component initialization. */
   ngOnInit() { this.http.get<any[]>('/api/orders').subscribe(data => this.orders = data); }
 }

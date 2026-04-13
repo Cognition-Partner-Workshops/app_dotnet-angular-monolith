@@ -2,8 +2,17 @@ using OrderManager.Api.Models;
 
 namespace OrderManager.Api.Data;
 
+/// <summary>
+/// Populates the database with initial demo data for customers, products, and inventory.
+/// Runs once at application startup and is skipped if data already exists.
+/// </summary>
 public static class SeedData
 {
+    /// <summary>
+    /// Seeds the database with sample customers, products, and inventory records.
+    /// No-ops if products already exist, making it safe to call on every startup.
+    /// </summary>
+    /// <param name="context">The database context to seed.</param>
     public static void Initialize(AppDbContext context)
     {
         context.Database.EnsureCreated();

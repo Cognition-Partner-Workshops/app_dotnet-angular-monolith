@@ -2,6 +2,10 @@ import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 
+/**
+ * Displays a table of all products with SKU, name, category, price, and current stock level.
+ * Data is fetched from the `/api/products` endpoint on initialization.
+ */
 @Component({
   selector: 'app-product-list',
   standalone: true,
@@ -19,7 +23,11 @@ import { CommonModule } from '@angular/common';
   `
 })
 export class ProductListComponent implements OnInit {
+  /** The list of products retrieved from the API. */
   products: any[] = [];
+
   constructor(private http: HttpClient) {}
+
+  /** Fetches all products from the backend on component initialization. */
   ngOnInit() { this.http.get<any[]>('/api/products').subscribe(data => this.products = data); }
 }

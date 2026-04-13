@@ -4,15 +4,27 @@ using OrderManager.Api.Models;
 
 namespace OrderManager.Api.Services;
 
+/// <summary>
+/// Provides business logic for managing orders, including creation with inventory validation
+/// and status lifecycle management.
+/// </summary>
 public class OrderService
 {
     private readonly AppDbContext _context;
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="OrderService"/>.
+    /// </summary>
+    /// <param name="context">The database context used for order data access.</param>
     public OrderService(AppDbContext context)
     {
         _context = context;
     }
 
+    /// <summary>
+    /// Retrieves all orders sorted by date descending, including customer and line-item details.
+    /// </summary>
+    /// <returns>A list of all <see cref="Order"/> records with related data eagerly loaded.</returns>
     public async Task<List<Order>> GetAllOrdersAsync()
     {
         return await _context.Orders
@@ -22,6 +34,11 @@ public class OrderService
             .ToListAsync();
     }
 
+    /// <summary>
+    /// Retrieves a single order by its identifier, including customer and line-item details.
+    /// </summary>
+    /// <param name="id">The unique identifier of the order.</param>
+    /// <returns>The matching <see cref="Order"/> with related data loaded, or <c>null</c> if not found.</returns>
     public async Task<Order?> GetOrderByIdAsync(int id)
     {
         return await _context.Orders
@@ -30,6 +47,16 @@ public class OrderService
             .FirstOrDefaultAsync(o => o.Id == id);
     }
 
+    /// <summary>
+    /// Creates a new order for the specified customer. Validates that each requested product exists
+    /// and has sufficient inventory, then decrements stock for each line item.
+    /// The shipping address is automatically derived from the customer's address on file.
+    /// </summary>
+    /// <param name="customerId">The identifier of the customer placing the order.</param>
+    /// <param name="items">A list of (ProductId, Quantity) tuples representing the order line items.</param>
+    /// <returns>The newly created <see cref="Order"/> with its generated identifier and computed total.</returns>
+    /// <exception cref="ArgumentException">Thrown when the customer or a product is not found.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when a product has no inventory record or insufficient stock.</exception>
     public async Task<Order> CreateOrderAsync(int customerId, List<(int ProductId, int Quantity)> items)
     {
         var customer = await _context.Customers.FindAsync(customerId)
@@ -68,6 +95,13 @@ public class OrderService
         return order;
     }
 
+    /// <summary>
+    /// Updates the status of an existing order (e.g. from "Pending" to "Shipped").
+    /// </summary>
+    /// <param name="orderId">The identifier of the order to update.</param>
+    /// <param name="status">The new status value to set.</param>
+    /// <returns>The updated <see cref="Order"/>.</returns>
+    /// <exception cref="ArgumentException">Thrown when the order is not found.</exception>
     public async Task<Order> UpdateOrderStatusAsync(int orderId, string status)
     {
         var order = await _context.Orders.FindAsync(orderId)

@@ -3,16 +3,37 @@ using OrderManager.Api.Models;
 
 namespace OrderManager.Api.Data;
 
+/// <summary>
+/// Entity Framework Core database context for the OrderManager application.
+/// Provides access to all domain entity sets and configures the relational model.
+/// </summary>
 public class AppDbContext : DbContext
 {
+    /// <summary>
+    /// Initializes a new instance of <see cref="AppDbContext"/> with the specified options.
+    /// </summary>
+    /// <param name="options">The database context configuration options (e.g. connection string, provider).</param>
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
+    /// <summary>Gets the set of all customer entities.</summary>
     public DbSet<Customer> Customers => Set<Customer>();
+
+    /// <summary>Gets the set of all product entities.</summary>
     public DbSet<Product> Products => Set<Product>();
+
+    /// <summary>Gets the set of all order entities.</summary>
     public DbSet<Order> Orders => Set<Order>();
+
+    /// <summary>Gets the set of all order line-item entities.</summary>
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
+
+    /// <summary>Gets the set of all inventory entities.</summary>
     public DbSet<InventoryItem> InventoryItems => Set<InventoryItem>();
 
+    /// <summary>
+    /// Configures the entity model, including primary keys, constraints, indexes, and relationships.
+    /// </summary>
+    /// <param name="modelBuilder">The builder used to construct the model for this context.</param>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Customer>(entity =>
