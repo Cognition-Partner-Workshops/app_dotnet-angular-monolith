@@ -8,4 +8,11 @@ dist/
 .angular/
 *.db
 appsettings.Development.json
+server-java/target/
+server-java/.classpath
+server-java/.project
+server-java/.settings/
+server-java/src/main/resources/static/
+client-app/node/
+client-app/dist/
 package-lock.json
