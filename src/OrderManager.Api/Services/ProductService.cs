@@ -4,7 +4,7 @@ using OrderManager.Api.Models;
 
 namespace OrderManager.Api.Services;
 
-public class ProductService
+public class ProductService : IProductService
 {
     private readonly AppDbContext _context;
 
