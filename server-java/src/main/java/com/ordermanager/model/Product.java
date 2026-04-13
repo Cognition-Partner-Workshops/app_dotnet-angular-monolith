@@ -1,7 +1,7 @@
 package com.ordermanager.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -39,7 +39,7 @@ public class Product {
     private List<OrderItem> orderItems = new ArrayList<>();
 
     @OneToOne(mappedBy = "product")
-    @JsonManagedReference("product-inventory")
+    @JsonIgnoreProperties("product")
     private InventoryItem inventory;
 
     public Long getId() { return id; }

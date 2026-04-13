@@ -1,6 +1,6 @@
 package com.ordermanager.model;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -23,7 +23,7 @@ public class InventoryItem {
 
     @OneToOne
     @JoinColumn(name = "product_id")
-    @JsonBackReference("product-inventory")
+    @JsonIgnoreProperties("inventory")
     private Product product;
 
     public Long getId() { return id; }

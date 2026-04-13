@@ -2,6 +2,7 @@ package com.ordermanager.controller;
 
 import com.ordermanager.model.Product;
 import com.ordermanager.service.ProductService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -35,7 +36,7 @@ public class ProductsController {
     }
 
     @PostMapping
-    public ResponseEntity<Product> create(@RequestBody Product product) {
+    public ResponseEntity<Product> create(@Valid @RequestBody Product product) {
         Product created = productService.createProduct(product);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")

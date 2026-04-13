@@ -2,6 +2,7 @@ package com.ordermanager.controller;
 
 import com.ordermanager.model.Customer;
 import com.ordermanager.service.CustomerService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -30,7 +31,7 @@ public class CustomersController {
     }
 
     @PostMapping
-    public ResponseEntity<Customer> create(@RequestBody Customer customer) {
+    public ResponseEntity<Customer> create(@Valid @RequestBody Customer customer) {
         Customer created = customerService.createCustomer(customer);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")

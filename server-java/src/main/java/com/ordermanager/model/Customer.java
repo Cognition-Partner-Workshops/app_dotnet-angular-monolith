@@ -1,6 +1,6 @@
 package com.ordermanager.model;
 
-import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -33,7 +33,7 @@ public class Customer {
     private String zipCode;
 
     @OneToMany(mappedBy = "customer")
-    @JsonManagedReference("customer-orders")
+    @JsonIgnore
     private List<Order> orders = new ArrayList<>();
 
     public Long getId() { return id; }
