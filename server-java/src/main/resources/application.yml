@@ -1,0 +1,14 @@
+server:
+  port: 5000
+spring:
+  datasource:
+    url: jdbc:sqlite:ordermanager.db
+    driver-class-name: org.sqlite.JDBC
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html

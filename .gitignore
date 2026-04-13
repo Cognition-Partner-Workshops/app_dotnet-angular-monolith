@@ -8,3 +8,7 @@ dist/
 .angular/
 *.db
 appsettings.Development.json
+server-java/target/
+server-java/.classpath
+server-java/.project
+server-java/.settings/
