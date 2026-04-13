@@ -88,6 +88,19 @@ Swagger UI is available at `http://localhost:5001/swagger-ui.html` when the appl
 └── README.md
 ```
 
+## Java Spring Boot Backend
+
+A Java Spring Boot backend is available at `server-java/` as part of an ongoing migration from .NET to Java. It mirrors the same API contract as the .NET backend. See [`MIGRATION_PLAN.md`](MIGRATION_PLAN.md) for the full migration journey and wave definitions.
+
+### Run the Java backend
+
+```bash
+cd server-java
+./mvnw spring-boot:run
+```
+
+The Java backend will be available at `http://localhost:5000`.
+
 ## Decomposition Targets
 
 This monolith is designed to be decomposed into microservices that conform to the
