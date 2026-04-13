@@ -9,3 +9,9 @@ dist/
 *.db
 appsettings.Development.json
 package-lock.json
+
+# Java build artifacts
+target/
+.classpath
+.project
+.settings/
