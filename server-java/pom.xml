@@ -82,14 +82,13 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
 
-            <!-- Optional: frontend-maven-plugin for building Angular -->
-            <!--
+            <!-- frontend-maven-plugin: builds Angular frontend during Maven build -->
             <plugin>
                 <groupId>com.github.eirslett</groupId>
                 <artifactId>frontend-maven-plugin</artifactId>
                 <version>1.15.0</version>
                 <configuration>
-                    <workingDirectory>../client-app</workingDirectory>
+                    <workingDirectory>${project.basedir}/../client-app</workingDirectory>
                     <nodeVersion>v18.19.0</nodeVersion>
                 </configuration>
                 <executions>
@@ -108,12 +107,32 @@
                         <id>npm-build</id>
                         <goals><goal>npm</goal></goals>
                         <configuration>
-                            <arguments>run build</arguments>
+                            <arguments>run build -- --output-path=dist</arguments>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
-            -->
+
+            <!-- Copy Angular build output into Spring Boot static resources -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-angular-build</id>
+                        <phase>generate-resources</phase>
+                        <goals><goal>copy-resources</goal></goals>
+                        <configuration>
+                            <outputDirectory>${project.basedir}/src/main/resources/static</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/../client-app/dist/browser</directory>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 </project>
