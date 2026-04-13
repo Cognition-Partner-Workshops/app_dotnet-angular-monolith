@@ -12,3 +12,4 @@ server-java/target/
 server-java/.classpath
 server-java/.project
 server-java/.settings/
+package-lock.json
