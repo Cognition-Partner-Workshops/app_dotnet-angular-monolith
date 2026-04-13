@@ -1,6 +1,10 @@
 import { Component } from '@angular/core';
 import { RouterOutlet, RouterLink } from '@angular/router';
 
+/**
+ * Root application component that provides the top-level navigation bar
+ * and a `<router-outlet>` for rendering feature module views.
+ */
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -17,5 +21,6 @@ import { RouterOutlet, RouterLink } from '@angular/router';
   `
 })
 export class AppComponent {
+  /** Application title displayed in the navigation header. */
   title = 'OrderManager';
 }
