@@ -2,6 +2,9 @@ package com.ordermanager.service;
 
 import com.ordermanager.model.InventoryItem;
 import com.ordermanager.repository.InventoryItemRepository;
+import jakarta.persistence.EntityNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -11,6 +14,8 @@ import java.util.Optional;
 
 @Service
 public class InventoryService {
+
+    private static final Logger log = LoggerFactory.getLogger(InventoryService.class);
 
     @Autowired
     private InventoryItemRepository inventoryItemRepository;
@@ -24,11 +29,17 @@ public class InventoryService {
     }
 
     public InventoryItem restock(Long productId, int quantity) {
+        log.info("Restocking product {} with {} units", productId, quantity);
         InventoryItem item = inventoryItemRepository.findByProductId(productId)
-                .orElseThrow(() -> new IllegalArgumentException("No inventory record for product " + productId));
+                .orElseThrow(() -> {
+                    log.warn("No inventory record found for product {}", productId);
+                    return new EntityNotFoundException("No inventory record for product " + productId);
+                });
         item.setQuantityOnHand(item.getQuantityOnHand() + quantity);
         item.setLastRestocked(LocalDateTime.now());
-        return inventoryItemRepository.save(item);
+        InventoryItem saved = inventoryItemRepository.save(item);
+        log.info("Product {} restocked. New quantity: {}", productId, saved.getQuantityOnHand());
+        return saved;
     }
 
     public List<InventoryItem> getLowStockItems() {

@@ -3,6 +3,7 @@ package com.ordermanager.controller;
 import com.ordermanager.dto.RestockRequest;
 import com.ordermanager.model.InventoryItem;
 import com.ordermanager.service.InventoryService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,7 +30,7 @@ public class InventoryController {
     }
 
     @PostMapping("/product/{productId}/restock")
-    public ResponseEntity<InventoryItem> restock(@PathVariable Long productId, @RequestBody RestockRequest request) {
+    public ResponseEntity<InventoryItem> restock(@PathVariable Long productId, @Valid @RequestBody RestockRequest request) {
         InventoryItem restocked = inventoryService.restock(productId, request.quantity());
         return ResponseEntity.ok(restocked);
     }

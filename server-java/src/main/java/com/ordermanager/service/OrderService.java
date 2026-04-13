@@ -3,6 +3,9 @@ package com.ordermanager.service;
 import com.ordermanager.dto.OrderItemRequest;
 import com.ordermanager.model.*;
 import com.ordermanager.repository.*;
+import jakarta.persistence.EntityNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +16,8 @@ import java.util.Optional;
 
 @Service
 public class OrderService {
+
+    private static final Logger log = LoggerFactory.getLogger(OrderService.class);
 
     @Autowired
     private OrderRepository orderRepository;
@@ -36,8 +41,13 @@ public class OrderService {
 
     @Transactional
     public Order createOrder(Long customerId, List<OrderItemRequest> items) {
+        log.info("Creating order for customer {} with {} item(s)", customerId, items.size());
+
         Customer customer = customerRepository.findById(customerId)
-                .orElseThrow(() -> new IllegalArgumentException("Customer " + customerId + " not found"));
+                .orElseThrow(() -> {
+                    log.warn("Customer {} not found", customerId);
+                    return new EntityNotFoundException("Customer " + customerId + " not found");
+                });
 
         Order order = new Order();
         order.setCustomer(customer);
@@ -47,12 +57,20 @@ public class OrderService {
 
         for (OrderItemRequest itemRequest : items) {
             Product product = productRepository.findById(itemRequest.productId())
-                    .orElseThrow(() -> new IllegalArgumentException("Product " + itemRequest.productId() + " not found"));
+                    .orElseThrow(() -> {
+                        log.warn("Product {} not found", itemRequest.productId());
+                        return new EntityNotFoundException("Product " + itemRequest.productId() + " not found");
+                    });
 
             InventoryItem inventory = inventoryItemRepository.findByProductId(itemRequest.productId())
-                    .orElseThrow(() -> new IllegalStateException("No inventory record for product " + itemRequest.productId()));
+                    .orElseThrow(() -> {
+                        log.warn("No inventory record for product {}", itemRequest.productId());
+                        return new IllegalStateException("No inventory record for product " + itemRequest.productId());
+                    });
 
             if (inventory.getQuantityOnHand() < itemRequest.quantity()) {
+                log.warn("Insufficient stock for product {} ({}). Requested: {}, Available: {}",
+                        product.getId(), product.getName(), itemRequest.quantity(), inventory.getQuantityOnHand());
                 throw new IllegalStateException(
                         "Insufficient stock for " + product.getName() + ". Available: " + inventory.getQuantityOnHand()
                 );
@@ -74,13 +92,21 @@ public class OrderService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         order.setTotalAmount(totalAmount);
 
-        return orderRepository.save(order);
+        Order saved = orderRepository.save(order);
+        log.info("Order {} created successfully. Total: {}", saved.getId(), saved.getTotalAmount());
+        return saved;
     }
 
     public Order updateOrderStatus(Long id, String status) {
+        log.info("Updating order {} status to '{}'", id, status);
         Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Order " + id + " not found"));
+                .orElseThrow(() -> {
+                    log.warn("Order {} not found for status update", id);
+                    return new EntityNotFoundException("Order " + id + " not found");
+                });
         order.setStatus(status);
-        return orderRepository.save(order);
+        Order saved = orderRepository.save(order);
+        log.info("Order {} status updated to '{}'", id, status);
+        return saved;
     }
 }

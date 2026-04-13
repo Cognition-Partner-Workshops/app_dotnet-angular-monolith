@@ -4,6 +4,7 @@ import com.ordermanager.dto.CreateOrderRequest;
 import com.ordermanager.dto.UpdateStatusRequest;
 import com.ordermanager.model.Order;
 import com.ordermanager.service.OrderService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -32,7 +33,7 @@ public class OrdersController {
     }
 
     @PostMapping
-    public ResponseEntity<Order> create(@RequestBody CreateOrderRequest request) {
+    public ResponseEntity<Order> create(@Valid @RequestBody CreateOrderRequest request) {
         Order created = orderService.createOrder(request.customerId(), request.items());
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
@@ -42,7 +43,7 @@ public class OrdersController {
     }
 
     @PatchMapping("/{id}/status")
-    public ResponseEntity<Order> updateStatus(@PathVariable Long id, @RequestBody UpdateStatusRequest request) {
+    public ResponseEntity<Order> updateStatus(@PathVariable Long id, @Valid @RequestBody UpdateStatusRequest request) {
         Order updated = orderService.updateOrderStatus(id, request.status());
         return ResponseEntity.ok(updated);
     }
