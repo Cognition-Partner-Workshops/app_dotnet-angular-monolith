@@ -1,6 +1,6 @@
 # OrderManager Monolith
 
-A .NET 8 + Angular 17 monolith application demonstrating tightly coupled modules sharing a single database. This is the **"before"** state for monolith-to-microservices decomposition demos.
+A .NET 8 + Angular 19 monolith application demonstrating tightly coupled modules sharing a single database. This is the **"before"** state for monolith-to-microservices decomposition demos.
 
 ## Architecture
 
@@ -18,14 +18,14 @@ All modules share a single SQLite database and are deployed as one unit.
 ## Tech Stack
 
 - **Backend**: .NET 8, C#, Entity Framework Core, SQLite
-- **Frontend**: Angular 17, TypeScript
+- **Frontend**: Angular 19, TypeScript
 - **API**: RESTful with Swagger/OpenAPI
 
 ## Getting Started
 
 ### Prerequisites
 - .NET 8 SDK
-- Node.js 18+
+- Node.js 18.19.1+ or 20.11.1+
 - Angular CLI (`npm install -g @angular/cli`)
 
 ### Run the application

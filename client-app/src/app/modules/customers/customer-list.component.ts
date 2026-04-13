@@ -1,21 +1,22 @@
 import { Component, OnInit } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { CommonModule } from '@angular/common';
 
 @Component({
-  selector: 'app-customer-list',
-  standalone: true,
-  imports: [CommonModule],
-  template: `
+    selector: 'app-customer-list',
+    template: `
     <h2>Customers</h2>
-    <table *ngIf="customers.length">
-      <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>City</th></tr></thead>
-      <tbody>
-        <tr *ngFor="let c of customers">
-          <td>{{c.name}}</td><td>{{c.email}}</td><td>{{c.phone}}</td><td>{{c.city}}, {{c.state}}</td>
-        </tr>
-      </tbody>
-    </table>
+    @if (customers.length) {
+      <table>
+        <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>City</th></tr></thead>
+        <tbody>
+          @for (c of customers; track c.email) {
+            <tr>
+              <td>{{c.name}}</td><td>{{c.email}}</td><td>{{c.phone}}</td><td>{{c.city}}, {{c.state}}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
   `
 })
 export class CustomerListComponent implements OnInit {
