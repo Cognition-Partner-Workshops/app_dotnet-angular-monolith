@@ -22,8 +22,7 @@ builder.Services.AddHttpClient<IProductApiClient, ProductApiClient>(client =>
     .AddPolicyHandler(retryPolicy);
 
 builder.Services.AddHttpClient<IInventoryApiClient, InventoryApiClient>(client =>
-    client.BaseAddress = new Uri(builder.Configuration["ServiceUrls:InventoryService"] ?? "http://localhost:5030"))
-    .AddPolicyHandler(retryPolicy);
+    client.BaseAddress = new Uri(builder.Configuration["ServiceUrls:InventoryService"] ?? "http://localhost:5030"));
 
 builder.Services.AddScoped<OrderService.Api.Services.OrderService>();
 

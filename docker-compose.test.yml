@@ -3,8 +3,8 @@ version: '3.8'
 services:
   e2e-tests:
     build:
-      context: .
-      dockerfile: tests/EndToEnd/Dockerfile
+      context: ./tests/EndToEnd
+      dockerfile: Dockerfile
     environment:
       - GATEWAY_URL=http://gateway:8080
     depends_on:

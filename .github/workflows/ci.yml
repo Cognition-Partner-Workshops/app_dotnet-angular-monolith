@@ -184,6 +184,7 @@ jobs:
             echo "Waiting for services... ($i/30)"
             sleep 5
           done
+          curl -f http://localhost:5001/health || (echo "Services failed to become healthy" && exit 1)
 
       - name: Run E2E tests
         run: |

@@ -29,6 +29,7 @@ public class InventoryService
             ?? throw new ArgumentException($"No inventory record for product {productId}");
         item.QuantityOnHand += quantity;
         item.LastRestocked = DateTime.UtcNow;
+        item.RowVersion++;
         await _context.SaveChangesAsync();
         return item;
     }
