@@ -132,7 +132,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: client-app
-        run: npm ci
+        run: npm install
 
       - name: Run tests
         working-directory: client-app
