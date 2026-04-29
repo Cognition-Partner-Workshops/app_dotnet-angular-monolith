@@ -1,0 +1,60 @@
+{
+  "consumer": {
+    "name": "OrderService"
+  },
+  "interactions": [
+    {
+      "description": "a request to get a non-existent product",
+      "pending": false,
+      "request": {
+        "method": "GET",
+        "path": "/api/products/9999"
+      },
+      "response": {
+        "status": 404
+      },
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "a request to get a product by id",
+      "pending": false,
+      "request": {
+        "method": "GET",
+        "path": "/api/products/1"
+      },
+      "response": {
+        "body": {
+          "content": {
+            "category": "Widgets",
+            "description": "Standard widget",
+            "id": 1,
+            "name": "Widget A",
+            "price": 9.99,
+            "sku": "WGT-001"
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "status": 200
+      },
+      "type": "Synchronous/HTTP"
+    }
+  ],
+  "metadata": {
+    "pactRust": {
+      "ffi": "0.4.23",
+      "models": "1.2.5"
+    },
+    "pactSpecification": {
+      "version": "4.0"
+    }
+  },
+  "provider": {
+    "name": "ProductService"
+  }
+}

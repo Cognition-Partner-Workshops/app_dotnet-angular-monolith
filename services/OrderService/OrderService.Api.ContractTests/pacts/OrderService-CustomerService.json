@@ -1,0 +1,90 @@
+{
+  "consumer": {
+    "name": "OrderService"
+  },
+  "interactions": [
+    {
+      "description": "a request to get a customer by id",
+      "pending": false,
+      "request": {
+        "method": "GET",
+        "path": "/api/customers/1"
+      },
+      "response": {
+        "body": {
+          "content": {
+            "address": "123 Main St",
+            "city": "Springfield",
+            "email": "orders@acme.com",
+            "id": 1,
+            "name": "Acme Corp",
+            "phone": "555-0100",
+            "state": "IL",
+            "zipCode": "62701"
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "status": 200
+      },
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "a request to get a non-existent customer",
+      "pending": false,
+      "request": {
+        "method": "GET",
+        "path": "/api/customers/9999"
+      },
+      "response": {
+        "status": 404
+      },
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "a request to get customer address",
+      "pending": false,
+      "request": {
+        "method": "GET",
+        "path": "/api/customers/1/address"
+      },
+      "response": {
+        "body": {
+          "content": {
+            "address": "123 Main St",
+            "city": "Springfield",
+            "fullAddress": "123 Main St, Springfield, IL 62701",
+            "state": "IL",
+            "zipCode": "62701"
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "status": 200
+      },
+      "type": "Synchronous/HTTP"
+    }
+  ],
+  "metadata": {
+    "pactRust": {
+      "ffi": "0.4.23",
+      "models": "1.2.5"
+    },
+    "pactSpecification": {
+      "version": "4.0"
+    }
+  },
+  "provider": {
+    "name": "CustomerService"
+  }
+}

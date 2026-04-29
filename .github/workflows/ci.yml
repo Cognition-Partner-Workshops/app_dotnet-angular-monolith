@@ -1,0 +1,194 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  NODE_VERSION: '18'
+
+jobs:
+  # Stage 1: Build and Unit Tests per service
+  unit-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        service:
+          - { name: CustomerService, path: services/CustomerService }
+          - { name: ProductService, path: services/ProductService }
+          - { name: InventoryService, path: services/InventoryService }
+          - { name: OrderService, path: services/OrderService }
+          - { name: Gateway, path: services/Gateway }
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore ${{ matrix.service.path }}/${{ matrix.service.name }}.sln
+
+      - name: Build
+        run: dotnet build ${{ matrix.service.path }}/${{ matrix.service.name }}.sln --no-restore -c Release
+
+      - name: Test
+        run: |
+          dotnet test ${{ matrix.service.path }}/${{ matrix.service.name }}.sln \
+            --no-build -c Release \
+            --logger "trx;LogFileName=test-results.trx" \
+            --collect:"XPlat Code Coverage" \
+            --results-directory ./test-results \
+            -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.service.name }}
+          path: ./test-results
+
+  # Stage 2: Lint check
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Check formatting - Customer Service
+        run: dotnet format services/CustomerService/CustomerService.sln --verify-no-changes
+
+      - name: Check formatting - Product Service
+        run: dotnet format services/ProductService/ProductService.sln --verify-no-changes
+
+      - name: Check formatting - Inventory Service
+        run: dotnet format services/InventoryService/InventoryService.sln --verify-no-changes
+
+      - name: Check formatting - Order Service
+        run: dotnet format services/OrderService/OrderService.sln --verify-no-changes
+
+      - name: Check formatting - Gateway
+        run: dotnet format services/Gateway/Gateway.sln --verify-no-changes
+
+      - name: Check formatting - Monolith
+        run: dotnet format OrderManager.sln --verify-no-changes
+
+  # Stage 3: Monolith tests (ensure existing tests still pass)
+  monolith-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore OrderManager.sln
+
+      - name: Build
+        run: dotnet build OrderManager.sln --no-restore
+
+      - name: Test
+        run: dotnet test OrderManager.sln --no-build --logger "trx"
+
+  # Stage 4: Contract tests
+  contract-tests:
+    runs-on: ubuntu-latest
+    needs: [unit-tests]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Run consumer pact tests
+        run: |
+          dotnet test services/OrderService/OrderService.Api.ContractTests/OrderService.Api.ContractTests.csproj \
+            --logger "trx"
+
+  # Stage 5: Angular tests
+  angular-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        working-directory: client-app
+        run: npm ci
+
+      - name: Run tests
+        working-directory: client-app
+        run: npm test -- --ci --coverage
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: angular-coverage
+          path: client-app/coverage
+
+  # Stage 6: Build Docker images (only if tests pass)
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: [unit-tests, lint, monolith-tests, contract-tests, angular-tests]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Customer Service image
+        run: docker build -t customer-service:ci ./services/CustomerService
+
+      - name: Build Product Service image
+        run: docker build -t product-service:ci ./services/ProductService
+
+      - name: Build Inventory Service image
+        run: docker build -t inventory-service:ci ./services/InventoryService
+
+      - name: Build Order Service image
+        run: docker build -t order-service:ci ./services/OrderService
+
+  # Stage 7: E2E tests via Docker Compose
+  e2e-tests:
+    runs-on: ubuntu-latest
+    needs: [docker-build]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start services
+        run: docker compose -f docker-compose.yml up -d --build --wait
+
+      - name: Wait for services to be healthy
+        run: |
+          for i in {1..30}; do
+            if curl -f http://localhost:5001/health 2>/dev/null; then
+              echo "Gateway is healthy"
+              break
+            fi
+            echo "Waiting for services... ($i/30)"
+            sleep 5
+          done
+
+      - name: Run E2E tests
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.test.yml run --rm e2e-tests-dockerfile
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.test.yml down -v

@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  e2e-tests:
+    build:
+      context: .
+      dockerfile: tests/EndToEnd/Dockerfile
+    environment:
+      - GATEWAY_URL=http://gateway:8080
+    depends_on:
+      gateway:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  e2e-tests-dockerfile:
+    build:
+      context: ./tests/EndToEnd
+    entrypoint: ["dotnet", "test", "--logger", "console;verbosity=detailed"]
+    environment:
+      - GATEWAY_URL=http://gateway:8080
+    depends_on:
+      gateway:
+        condition: service_healthy
+    networks:
+      - app-network

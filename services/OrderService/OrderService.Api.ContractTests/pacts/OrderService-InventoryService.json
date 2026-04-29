@@ -1,0 +1,130 @@
+{
+  "consumer": {
+    "name": "OrderService"
+  },
+  "interactions": [
+    {
+      "description": "a request to release reserved stock",
+      "pending": false,
+      "request": {
+        "body": {
+          "content": {
+            "quantity": 5
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "method": "POST",
+        "path": "/api/inventory/product/1/release"
+      },
+      "response": {
+        "body": {
+          "content": {
+            "message": "Stock released successfully",
+            "success": true
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "status": 200
+      },
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "a request to reserve stock with insufficient quantity",
+      "pending": false,
+      "request": {
+        "body": {
+          "content": {
+            "quantity": 99999
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "method": "POST",
+        "path": "/api/inventory/product/1/reserve"
+      },
+      "response": {
+        "body": {
+          "content": {
+            "message": "Insufficient stock",
+            "success": false
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "status": 400
+      },
+      "type": "Synchronous/HTTP"
+    },
+    {
+      "description": "a request to reserve stock with sufficient quantity",
+      "pending": false,
+      "request": {
+        "body": {
+          "content": {
+            "quantity": 5
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "method": "POST",
+        "path": "/api/inventory/product/1/reserve"
+      },
+      "response": {
+        "body": {
+          "content": {
+            "message": "Stock reserved successfully",
+            "success": true
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "status": 200
+      },
+      "type": "Synchronous/HTTP"
+    }
+  ],
+  "metadata": {
+    "pactRust": {
+      "ffi": "0.4.23",
+      "models": "1.2.5"
+    },
+    "pactSpecification": {
+      "version": "4.0"
+    }
+  },
+  "provider": {
+    "name": "InventoryService"
+  }
+}
