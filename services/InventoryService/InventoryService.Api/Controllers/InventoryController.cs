@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace InventoryService.Api.Controllers;
 
@@ -26,26 +27,51 @@ public class InventoryController : ControllerBase
     [HttpPost("product/{productId}/restock")]
     public async Task<IActionResult> Restock(int productId, [FromBody] RestockRequest request)
     {
-        var item = await _inventoryService.RestockAsync(productId, request.Quantity);
-        return Ok(item);
+        try
+        {
+            var item = await _inventoryService.RestockAsync(productId, request.Quantity);
+            return Ok(item);
+        }
+        catch (ArgumentException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { error = "Concurrent modification detected. Please retry." });
+        }
     }
 
     [HttpPost("product/{productId}/reserve")]
     public async Task<IActionResult> Reserve(int productId, [FromBody] ReserveRequest request)
     {
-        var (success, message) = await _inventoryService.ReserveStockAsync(productId, request.Quantity);
-        if (!success)
-            return BadRequest(new { success, message });
-        return Ok(new { success, message });
+        try
+        {
+            var (success, message) = await _inventoryService.ReserveStockAsync(productId, request.Quantity);
+            if (!success)
+                return BadRequest(new { success, message });
+            return Ok(new { success, message });
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { error = "Concurrent modification detected. Please retry." });
+        }
     }
 
     [HttpPost("product/{productId}/release")]
     public async Task<IActionResult> Release(int productId, [FromBody] ReleaseRequest request)
     {
-        var (success, message) = await _inventoryService.ReleaseStockAsync(productId, request.Quantity);
-        if (!success)
-            return BadRequest(new { success, message });
-        return Ok(new { success, message });
+        try
+        {
+            var (success, message) = await _inventoryService.ReleaseStockAsync(productId, request.Quantity);
+            if (!success)
+                return BadRequest(new { success, message });
+            return Ok(new { success, message });
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { error = "Concurrent modification detected. Please retry." });
+        }
     }
 
     [HttpGet("low-stock")]
