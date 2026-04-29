@@ -4,16 +4,16 @@ EXPOSE 8080
 
 FROM node:18-alpine AS angular-build
 WORKDIR /client
-COPY ../../client-app/package*.json ./
-RUN npm ci
-COPY ../../client-app/ .
+COPY client-app/package*.json ./
+RUN npm install
+COPY client-app/ .
 RUN npx ng build --output-path dist
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
-COPY Gateway.Api/Gateway.Api.csproj Gateway.Api/
+COPY services/Gateway/Gateway.Api/Gateway.Api.csproj Gateway.Api/
 RUN dotnet restore Gateway.Api/Gateway.Api.csproj
-COPY . .
+COPY services/Gateway/ .
 RUN dotnet build Gateway.Api/Gateway.Api.csproj -c Release -o /app/build
 
 FROM build AS publish
