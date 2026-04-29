@@ -41,6 +41,11 @@ public class InventoryApiClient : IInventoryApiClient
             return errorResult ?? new ReserveStockResponse { Success = false, Message = "Reserve failed" };
         }
 
+        if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+        {
+            return new ReserveStockResponse { Success = false, Message = "Concurrent modification detected. Please retry." };
+        }
+
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<ReserveStockResponse>();
         return result ?? new ReserveStockResponse { Success = false, Message = "Invalid response" };
