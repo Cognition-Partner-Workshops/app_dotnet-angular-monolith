@@ -164,6 +164,9 @@ jobs:
       - name: Build Order Service image
         run: docker build -t order-service:ci ./services/OrderService
 
+      - name: Build Gateway image
+        run: docker build -t gateway:ci -f services/Gateway/Dockerfile .
+
   # Stage 7: E2E tests via Docker Compose
   e2e-tests:
     runs-on: ubuntu-latest
